@@ -12,3 +12,6 @@ local.properties
 .idea
 .gradle
 build/
+
+# System files
+.DS_Store

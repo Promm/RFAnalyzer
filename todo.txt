@@ -1,0 +1,8 @@
+Add new recording function:
+1. Record frame shots from the [start] frequency to the [ending] frequency using current bandwidth. (Each shot lasts just "1 frame", and the window move automatically after the frame be taken). The final file is recorded into one file. (New input area in the interface). {10hours}
+2. Can repeat step 1 with adjustable time intevals. {5hours}
+3. When reading a file recorded using 1, output the full spectrum value after FFT into a readable file. {10hours}
+
+Work need to comfirm:
+The suitable value that can be used as the bandwidth. Detect if the window is movable while recording.{1hour}
+

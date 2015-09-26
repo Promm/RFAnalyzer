@@ -1302,6 +1302,12 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		final EditText et_stopAfter = (EditText) view.findViewById(R.id.et_recording_stopAfter);
 		final Spinner sp_stopAfter = (Spinner) view.findViewById(R.id.sp_recording_stopAfter);
 
+		// The added widgets used for taking frame shot in specific range of frequency
+		final CheckBox cb_enableShot = (CheckBox) view.findViewById(R.id.cb_recording_enableShot);
+		final EditText et_shotEndOn = (EditText) view.findViewById(R.id.et_recording_shotEndOn);
+		final EditText et_maxShot = (EditText) view.findViewById(R.id.et_recording_maxShots);
+		final EditText et_shotInterval = (EditText) view.findViewById(R.id.et_recording_shotInterval);
+
 		// Setup the sample rate spinner:
 		final ArrayAdapter<Integer> sampleRateAdapter = new ArrayAdapter<Integer>(this, android.R.layout.simple_list_item_1);
 		for(int sampR: supportedSampleRates)
@@ -1327,19 +1333,21 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 			}
 		});
 		sp_sampleRate.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-			@Override
-			public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-				if(et_frequency.getText().length() == 0)
-					return;
-				double freq = Double.valueOf(et_frequency.getText().toString());
-				if (freq < maxFreqMHz)
-					freq = freq * 1000000;
-				et_filename.setText(simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
-						+ (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq");
-			}
-			@Override
-			public void onNothingSelected(AdapterView<?> parent) {}
-		});
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (et_frequency.getText().length() == 0)
+                    return;
+                double freq = Double.valueOf(et_frequency.getText().toString());
+                if (freq < maxFreqMHz)
+                    freq = freq * 1000000;
+                et_filename.setText(simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
+                        + (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq");
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
 		cb_stopAfter.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -1347,6 +1355,39 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 				sp_stopAfter.setEnabled(isChecked);
 			}
 		});
+
+
+		// Listeners to the Frame shot areas
+        cb_enableShot.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                et_shotEndOn.setEnabled(isChecked);
+                et_maxShot.setEnabled(isChecked);
+                et_shotInterval.setEnabled(isChecked);
+
+            }
+        });
+
+        et_shotEndOn.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                // The ending frequency should not be smaller than the starting frequency
+                if (et_shotEndOn.getText().length() == 0 || et_frequency.getText().length() == 0)
+                    return;
+                double freq1 = Double.valueOf(et_frequency.getText().toString());
+                if (freq1 < maxFreqMHz)
+                    freq1 = freq1 * 1000000;
+                double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
+                if (freq2 < maxFreqMHz)
+                    freq2 = freq2 * 1000000;
+                if (freq1 > freq2)
+                    et_shotEndOn.setText(et_frequency.getText());
+            }
+        });
 
 		// Set default frequency, sample rate and stop after values:
 		et_frequency.setText("" + analyzerSurface.getVirtualFrequency());
@@ -1363,6 +1404,14 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		cb_stopAfter.setChecked(preferences.getBoolean(getString(R.string.pref_recordingStopAfterEnabled), false));
 		et_stopAfter.setText("" + preferences.getInt(getString(R.string.pref_recordingStopAfterValue), 10));
 		sp_stopAfter.setSelection(preferences.getInt(getString(R.string.pref_recordingStopAfterUnit), 0));
+
+        // default variables for Frame shot
+        cb_enableShot.toggle();
+        cb_enableShot.setChecked(preferences.getBoolean(getString(R.string.pref_recordingEnableShot), false));
+        et_shotEndOn.setText("" + preferences.getInt(getString(R.string.pref_recordingShotEndOn),
+                Integer.valueOf(et_frequency.getText().toString())));
+        et_maxShot.setText("" + preferences.getInt(getString(R.string.pref_recordingMaxShot), 0));
+        et_shotInterval.setText("" + preferences.getInt(getString(R.string.pref_recordingShotInterval), 0));
 
 		// disable sample rate selection if demodulation is running:
 		if(demodulationMode != Demodulator.DEMODULATION_OFF) {

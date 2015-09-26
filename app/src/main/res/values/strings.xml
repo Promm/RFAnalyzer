@@ -33,6 +33,10 @@
     <string name="recording_sampleRate">Sample rate:</string>
     <string name="recording_fixedSampleRateHint">Sample rate is fixed because demodulation is running!</string>
     <string name="recording_stopAfter">Stop after:</string>
+    <string name="recording_enableFrameShot">Enable frame shot</string>
+    <string name="recording_frameShotEndOn">Ends on (Hz or MHz):</string>
+    <string name="recording_maxFrameShotTaken">Maximum shots taken (0 for infinity):</string>
+    <string name="recording_frameShotInterval">Time interval between 2 shots (s):</string>
     <string name="save_state_running">save_state_running</string>
     <string name="save_state_demodulatorMode">save_state_demodulatorMode</string>
     <string name="save_state_channelFrequency">save_state_channelFrequency</string>
@@ -51,6 +55,10 @@
     <string name="pref_recordingStopAfterEnabled">pref_recordingStopAfterEnabled</string>
     <string name="pref_recordingStopAfterValue">pref_recordingStopAfterValue</string>
     <string name="pref_recordingStopAfterUnit">pref_recordingStopAfterUnit</string>
+    <string name="pref_recordingEnableShot">pref_recordingEnableShot</string>
+    <string name="pref_recordingShotEndOn">pref_recordingShotEndOn</string>
+    <string name="pref_recordingMaxShot">pref_recordingMaxShot</string>
+    <string name="pref_recordingShotInterval">pref_recordingShotInterval</string>
     <string name="pref_hackrf_vgaRxGain">pref_hackrf_vgaRxGain</string>
     <string name="pref_hackrf_lnaGain">pref_hackrf_lnaGain</string>
     <string name="pref_rtlsdr_manual_gain">pref_rtlsdr_manual_gain</string>

@@ -59,6 +59,10 @@ public class Scheduler extends Thread {
 	private static final int DEMOD_QUEUE_SIZE = 20;
 	private static final String LOGTAG = "Scheduler";
 
+	// The variables for frame shots.
+	private boolean frameShot = false;
+	private long endingFrequence = 0;
+
 	public Scheduler(int fftSize, IQSourceInterface source) {
 		this.source = source;
 
@@ -159,6 +163,11 @@ public class Scheduler extends Thread {
 	public boolean isRecording() {
 		return bufferedOutputStream != null;
 	}
+
+	// The new methods to operate on the variables for frame shot
+	public void startFrameShot() { frameShot = true; }
+	public void stopFrameShot() { frameShot = false; }
+	public void frameShotEndFre( long iFreq ) { endingFrequence = iFreq; }
 
 	@Override
 	public void run() {

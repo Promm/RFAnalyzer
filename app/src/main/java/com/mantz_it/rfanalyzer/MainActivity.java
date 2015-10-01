@@ -94,6 +94,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
 	// The variables for recording the frame shot status;
 	private boolean frameShotLoop = false;
+	private boolean recordRunning = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -277,7 +278,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 											break;
 			case R.id.action_autoscale:		analyzerSurface.autoscale();
 											break;
-			case R.id.action_record:		if(scheduler != null && scheduler.isRecording())
+			case R.id.action_record:		if(scheduler != null && recordRunning)
 												stopRecordingForce();
 											else
 												showRecordingDialog();
@@ -299,72 +300,72 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 	 */
 	private void updateActionBar() {
 		this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                // Set title and icon of the start/stop button according to the state:
-                if (mi_startStop != null) {
-                    if (running) {
-                        mi_startStop.setTitle(R.string.action_stop);
-                        mi_startStop.setIcon(R.drawable.ic_action_pause);
-                    } else {
-                        mi_startStop.setTitle(R.string.action_start);
-                        mi_startStop.setIcon(R.drawable.ic_action_play);
-                    }
-                }
+			@Override
+			public void run() {
+				// Set title and icon of the start/stop button according to the state:
+				if (mi_startStop != null) {
+					if (running) {
+						mi_startStop.setTitle(R.string.action_stop);
+						mi_startStop.setIcon(R.drawable.ic_action_pause);
+					} else {
+						mi_startStop.setTitle(R.string.action_start);
+						mi_startStop.setIcon(R.drawable.ic_action_play);
+					}
+				}
 
-                // Set title and icon for the demodulator mode button
-                if (mi_demodulationMode != null) {
-                    int iconRes;
-                    int titleRes;
-                    switch (demodulationMode) {
-                        case Demodulator.DEMODULATION_OFF:
-                            iconRes = R.drawable.ic_action_demod_off;
-                            titleRes = R.string.action_demodulation_off;
-                            break;
-                        case Demodulator.DEMODULATION_AM:
-                            iconRes = R.drawable.ic_action_demod_am;
-                            titleRes = R.string.action_demodulation_am;
-                            break;
-                        case Demodulator.DEMODULATION_NFM:
-                            iconRes = R.drawable.ic_action_demod_nfm;
-                            titleRes = R.string.action_demodulation_nfm;
-                            break;
-                        case Demodulator.DEMODULATION_WFM:
-                            iconRes = R.drawable.ic_action_demod_wfm;
-                            titleRes = R.string.action_demodulation_wfm;
-                            break;
-                        case Demodulator.DEMODULATION_LSB:
-                            iconRes = R.drawable.ic_action_demod_lsb;
-                            titleRes = R.string.action_demodulation_lsb;
-                            break;
-                        case Demodulator.DEMODULATION_USB:
-                            iconRes = R.drawable.ic_action_demod_usb;
-                            titleRes = R.string.action_demodulation_usb;
-                            break;
-                        default:
-                            Log.e(LOGTAG, "updateActionBar: invalid mode: " + demodulationMode);
-                            iconRes = -1;
-                            titleRes = -1;
-                            break;
-                    }
-                    if (titleRes > 0 && iconRes > 0) {
-                        mi_demodulationMode.setTitle(titleRes);
-                        mi_demodulationMode.setIcon(iconRes);
-                    }
-                }
+				// Set title and icon for the demodulator mode button
+				if (mi_demodulationMode != null) {
+					int iconRes;
+					int titleRes;
+					switch (demodulationMode) {
+						case Demodulator.DEMODULATION_OFF:
+							iconRes = R.drawable.ic_action_demod_off;
+							titleRes = R.string.action_demodulation_off;
+							break;
+						case Demodulator.DEMODULATION_AM:
+							iconRes = R.drawable.ic_action_demod_am;
+							titleRes = R.string.action_demodulation_am;
+							break;
+						case Demodulator.DEMODULATION_NFM:
+							iconRes = R.drawable.ic_action_demod_nfm;
+							titleRes = R.string.action_demodulation_nfm;
+							break;
+						case Demodulator.DEMODULATION_WFM:
+							iconRes = R.drawable.ic_action_demod_wfm;
+							titleRes = R.string.action_demodulation_wfm;
+							break;
+						case Demodulator.DEMODULATION_LSB:
+							iconRes = R.drawable.ic_action_demod_lsb;
+							titleRes = R.string.action_demodulation_lsb;
+							break;
+						case Demodulator.DEMODULATION_USB:
+							iconRes = R.drawable.ic_action_demod_usb;
+							titleRes = R.string.action_demodulation_usb;
+							break;
+						default:
+							Log.e(LOGTAG, "updateActionBar: invalid mode: " + demodulationMode);
+							iconRes = -1;
+							titleRes = -1;
+							break;
+					}
+					if (titleRes > 0 && iconRes > 0) {
+						mi_demodulationMode.setTitle(titleRes);
+						mi_demodulationMode.setIcon(iconRes);
+					}
+				}
 
-                // Set title and icon of the record button according to the state:
-                if (mi_record != null) {
-                    if (recordingFile != null) {
-                        mi_record.setTitle(R.string.action_recordOn);
-                        mi_record.setIcon(R.drawable.ic_action_record_on);
-                    } else {
-                        mi_record.setTitle(R.string.action_recordOff);
-                        mi_record.setIcon(R.drawable.ic_action_record_off);
-                    }
-                }
-            }
-        });
+				// Set title and icon of the record button according to the state:
+				if (mi_record != null) {
+					if (recordingFile != null) {
+						mi_record.setTitle(R.string.action_recordOn);
+						mi_record.setIcon(R.drawable.ic_action_record_on);
+					} else {
+						mi_record.setTitle(R.string.action_recordOff);
+						mi_record.setIcon(R.drawable.ic_action_record_off);
+					}
+				}
+			}
+		});
 
 	}
 
@@ -1341,21 +1342,21 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 			}
 		});
 		sp_sampleRate.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (et_frequency.getText().length() == 0)
-                    return;
-                double freq = Double.valueOf(et_frequency.getText().toString());
-                if (freq < maxFreqMHz)
-                    freq = freq * 1000000;
-                et_filename.setText(simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
-                        + (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq");
-            }
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+				if (et_frequency.getText().length() == 0)
+					return;
+				double freq = Double.valueOf(et_frequency.getText().toString());
+				if (freq < maxFreqMHz)
+					freq = freq * 1000000;
+				et_filename.setText(simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
+						+ (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq");
+			}
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
+			@Override
+			public void onNothingSelected(AdapterView<?> parent) {
+			}
+		});
 		cb_stopAfter.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -1366,36 +1367,40 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
 
 		// Listeners to the Frame shot areas
-        cb_enableShot.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                et_shotEndOn.setEnabled(isChecked);
-                et_maxShot.setEnabled(isChecked);
-                et_shotInterval.setEnabled(isChecked);
+		cb_enableShot.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				et_shotEndOn.setEnabled(isChecked);
+				et_maxShot.setEnabled(isChecked);
+				et_shotInterval.setEnabled(isChecked);
 
-            }
-        });
+			}
+		});
 
-        et_shotEndOn.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                // The ending frequency should not be smaller than the starting frequency
-                if (et_shotEndOn.getText().length() == 0 || et_frequency.getText().length() == 0)
-                    return;
-                double freq1 = Double.valueOf(et_frequency.getText().toString());
-                if (freq1 < maxFreqMHz)
-                    freq1 = freq1 * 1000000;
-                double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
-                if (freq2 < maxFreqMHz)
-                    freq2 = freq2 * 1000000;
-                if (freq1 > freq2)
-                    et_shotEndOn.setText(et_frequency.getText());
-            }
-        });
+		et_shotEndOn.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+			}
+
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				// The ending frequency should not be smaller than the starting frequency
+				if (et_shotEndOn.getText().length() == 0 || et_frequency.getText().length() == 0)
+					return;
+				double freq1 = Double.valueOf(et_frequency.getText().toString());
+				if (freq1 < maxFreqMHz)
+					freq1 = freq1 * 1000000;
+				double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
+				if (freq2 < maxFreqMHz)
+					freq2 = freq2 * 1000000;
+				if (freq1 > freq2)
+					et_shotEndOn.setText(et_frequency.getText());
+			}
+		});
 
 		// Set default frequency, sample rate and stop after values:
 		et_frequency.setText("" + analyzerSurface.getVirtualFrequency());
@@ -1413,14 +1418,18 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		et_stopAfter.setText("" + preferences.getInt(getString(R.string.pref_recordingStopAfterValue), 10));
 		sp_stopAfter.setSelection(preferences.getInt(getString(R.string.pref_recordingStopAfterUnit), 0));
 
-        // default variables for Frame shot
-        cb_enableShot.toggle();
-        cb_enableShot.setChecked(preferences.getBoolean(getString(R.string.pref_recordingEnableShot), false));
-        et_shotEndOn.setText("" + preferences.getInt(getString(R.string.pref_recordingShotEndOn),
-                Integer.valueOf(et_frequency.getText().toString())));
-        et_maxShot.setText("" + preferences.getInt(getString(R.string.pref_recordingMaxShot), 0));
-        et_shotInterval.setText("" + preferences.getInt(getString(R.string.pref_recordingShotInterval), 0));
+		// default variables for Frame shot
+		cb_enableShot.toggle();
+		cb_enableShot.setChecked(preferences.getBoolean(getString(R.string.pref_recordingEnableShot), false));
+		et_shotEndOn.setText("" + preferences.getInt(getString(R.string.pref_recordingShotEndOn),
+				Integer.valueOf(et_frequency.getText().toString())));
+		et_maxShot.setText("" + preferences.getInt(getString(R.string.pref_recordingMaxShot), 0));
+		et_shotInterval.setText("" + preferences.getInt(getString(R.string.pref_recordingShotInterval), 0));
 
+		if (!frameShotLoop) {
+			Toast.makeText(MainActivity.this, "1", Toast.LENGTH_LONG).show();
+			return;
+		}
 		// disable sample rate selection if demodulation is running:
 		if(demodulationMode != Demodulator.DEMODULATION_OFF) {
 			sampleRateAdapter.add(source.getSampleRate());	// add the current sample rate in case it's not already in the list
@@ -1468,21 +1477,22 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 							frameShotLoop = true;
 							scheduler.startFrameShot();
 
-                            double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
-                            if (freq2 < maxFreqMHz)
-                                freq2 = freq2 * 1000000;
-                            if (freq2 > source.getMaxFrequency()) {
-                                freq2 = source.getMaxFrequency();
-                            }
-                            if (freq2 < freq)
-                            {
-                                freq2 = freq;
-                            }
+							double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
+							if (freq2 < maxFreqMHz)
+								freq2 = freq2 * 1000000;
+							if (freq2 > source.getMaxFrequency()) {
+								freq2 = source.getMaxFrequency();
+							}
+							if (freq2 < freq)
+							{
+								freq2 = freq;
+							}
 							scheduler.frameShotEndFre((long)freq2);
 						}
 
 						try {
 							scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
+							recordRunning = true;
 						} catch (FileNotFoundException e) {
 							Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
 						}
@@ -1565,7 +1575,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 												Thread.sleep(500);
 											}
 
-                                            long thisTime = System.currentTimeMillis();
+											long thisTime = System.currentTimeMillis();
 
 											presentLoop += 1;
 											// The Frame Shot Loop is cut down by the user or the max loop is reached.
@@ -1575,53 +1585,54 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
 											stopRecording();
 											// Restore the interface to show that it is still in recording process.
-                                            analyzerSurface.setRecordingEnabled(true);
-                                            updateActionBar();
+											analyzerSurface.setRecordingEnabled(true);
+											updateActionBar();
+											recordRunning = true;
 
 											while (frameShotLoop && (System.currentTimeMillis() - thisTime) / 1000 < rInterval) {
 												// Check every half second if the time interval has been reached.
 												Thread.sleep(500);
 											}
 
-                                            if (frameShotLoop)
-                                            {
-                                                // Create new recording process.
-                                                double freq = Double.valueOf(et_frequency.getText().toString());
-                                                if (freq < maxFreqMHz)
-                                                    freq = freq * 1000000;
-                                                source.setFrequency((long)freq);
-                                                if(demodulationMode == Demodulator.DEMODULATION_OFF)
-                                                    source.setSampleRate((Integer)sp_sampleRate.getSelectedItem());
+											if (frameShotLoop)
+											{
+												// Create new recording process.
+												double freq = Double.valueOf(et_frequency.getText().toString());
+												if (freq < maxFreqMHz)
+													freq = freq * 1000000;
+												source.setFrequency((long)freq);
+												if(demodulationMode == Demodulator.DEMODULATION_OFF)
+													source.setSampleRate((Integer)sp_sampleRate.getSelectedItem());
 
-                                                String filename = simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
-                                                        + (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq";
-                                                recordingFile = new File(externalDir + "/" + RECORDING_DIR + "/" + filename);
-                                                recordingFile.getParentFile().mkdir();
+												String filename = simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
+														+ (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq";
+												recordingFile = new File(externalDir + "/" + RECORDING_DIR + "/" + filename);
+												recordingFile.getParentFile().mkdir();
 
-                                                try {
-                                                    scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
-                                                } catch (FileNotFoundException e) {
-                                                    Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
-                                                }
-                                            }
+												try {
+													scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
+												} catch (FileNotFoundException e) {
+													Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
+												}
+											}
 										}
 									} catch (InterruptedException e) {
 										Log.e(LOGTAG, "frameshot_superviser: Interrupted!");
 									}
-                                    stopRecordingForce();
+									stopRecordingForce();
 								}
 							};
-                            supervisorThread.start();
+							supervisorThread.start();
 						}
 					}
 				})
 				.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
 						// do nothing
-                    }
-                })
-                .show()
-                .getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+					}
+				})
+				.show()
+				.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 	}
 
 	public void stopRecordingForce() {
@@ -1647,6 +1658,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		}
 		if(analyzerSurface != null)
 			analyzerSurface.setRecordingEnabled(false);
+		recordRunning = false;
 	}
 
 	/**

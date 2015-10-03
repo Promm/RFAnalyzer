@@ -165,9 +165,9 @@ public class Scheduler extends Thread {
 	}
 
 	// The new methods to operate on the variables for frame shot
-	public void startFrameShot() { frameShot = true; }
-	public void stopFrameShot() { frameShot = false; }
-	public void frameShotEndFre( long iFreq ) { endingFrequence = iFreq; }
+	public void startFrameShot() { this.frameShot = true; }
+	public void stopFrameShot() { this.frameShot = false; }
+	public void frameShotEndFre( long iFreq ) { this.endingFrequence = iFreq; }
 
 	@Override
 	public void run() {
@@ -236,6 +236,17 @@ public class Scheduler extends Thread {
 
 				// check if the buffer is now full and if so: deliver it to the output queue
 				if(fftBuffer.capacity() == fftBuffer.size()) {
+					// If is doing frame shot, move window forward until reach the end.
+					fftBuffer.setFrameShot(this.frameShot);
+					if (this.frameShot) {
+						if (source.getFrequency() + source.getSampleRate() < this.endingFrequence) {
+							source.setFrequency(source.getFrequency() + 2* source.getSampleRate());
+						} else {
+							this.stopRecording();
+							this.frameShot = false;
+						}
+					}
+
 					fftOutputQueue.offer(fftBuffer);
 					fftBuffer = null;
 				}

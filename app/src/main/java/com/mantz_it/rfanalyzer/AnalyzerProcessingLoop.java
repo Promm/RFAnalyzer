@@ -123,6 +123,9 @@ public class AnalyzerProcessingLoop extends Thread {
 		long sleepTime;		// time (in ms) to sleep before the next run to meet the frame rate
 		long frequency;		// center frequency of the incoming samples
 		int sampleRate;		// sample rate of the incoming samples
+		boolean frameShot = false;	// Whether it is taking frameShot;
+		boolean pFrameShot = false;	// Whether it was taking frameShot in last buffer.
+									// Used to decide where to start and stop.
 
 		while(!stopRequested) {
 			// store the current timestamp
@@ -144,6 +147,7 @@ public class AnalyzerProcessingLoop extends Thread {
 
 			frequency = samples.getFrequency();
 			sampleRate = samples.getSampleRate();
+			frameShot = samples.getFrameShot();
 
 			// do the signal processing:
 			this.doProcessing(samples);
@@ -182,6 +186,7 @@ public class AnalyzerProcessingLoop extends Thread {
 			} catch (Exception e) {
 				Log.e(LOGTAG,"Error while calling sleep()");
 			}
+			pFrameShot = frameShot;
 		}
 		this.stopRequested = true;
 		Log.i(LOGTAG,"Processing loop stopped. (Thread: " + this.getName() + ")");

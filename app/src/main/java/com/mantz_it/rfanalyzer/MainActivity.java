@@ -1332,11 +1332,13 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 				double freq = Double.valueOf(et_frequency.getText().toString());
 				if (freq < maxFreqMHz)
 					freq = freq * 1000000;
-				double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
-				if (freq2 < maxFreqMHz)
-					freq2 = freq2 * 1000000;
-				if (freq > freq2)
-					et_shotEndOn.setText(et_frequency.getText());
+				try {
+					double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
+					if (freq2 < maxFreqMHz)
+						freq2 = freq2 * 1000000;
+					if (freq > freq2)
+						et_shotEndOn.setText(et_frequency.getText());
+				} catch (Exception e) {}
 				et_filename.setText(simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
 						+ (long)freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq");
 			}
@@ -1377,6 +1379,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 			}
 		});
 
+		/*
 		et_shotEndOn.addTextChangedListener(new TextWatcher() {
 			@Override
 			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -1400,7 +1403,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 				if (freq1 > freq2)
 					et_shotEndOn.setText(et_frequency.getText());
 			}
-		});
+		});*/
 
 		// Set default frequency, sample rate and stop after values:
 		et_frequency.setText("" + analyzerSurface.getVirtualFrequency());
@@ -1421,15 +1424,10 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		// default variables for Frame shot
 		cb_enableShot.toggle();
 		cb_enableShot.setChecked(preferences.getBoolean(getString(R.string.pref_recordingEnableShot), false));
-		et_shotEndOn.setText("" + preferences.getInt(getString(R.string.pref_recordingShotEndOn),
-				Integer.valueOf(et_frequency.getText().toString())));
+		et_shotEndOn.setText(et_frequency.getText());
 		et_maxShot.setText("" + preferences.getInt(getString(R.string.pref_recordingMaxShot), 0));
 		et_shotInterval.setText("" + preferences.getInt(getString(R.string.pref_recordingShotInterval), 0));
 
-		if (!frameShotLoop) {
-			Toast.makeText(MainActivity.this, "1", Toast.LENGTH_LONG).show();
-			return;
-		}
 		// disable sample rate selection if demodulation is running:
 		if(demodulationMode != Demodulator.DEMODULATION_OFF) {
 			sampleRateAdapter.add(source.getSampleRate());	// add the current sample rate in case it's not already in the list
@@ -1472,10 +1470,8 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
 
 						// The Frame Shot preparations
-						scheduler.stopFrameShot();
 						if (cb_enableShot.isChecked()) {
 							frameShotLoop = true;
-							scheduler.startFrameShot();
 
 							double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
 							if (freq2 < maxFreqMHz)
@@ -1491,10 +1487,17 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 						}
 
 						try {
+							// Make sure the buffer is filled with correct signals.
+							Thread.sleep(150);
 							scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
+							if (cb_enableShot.isChecked()) {
+								scheduler.startFrameShot();
+							}
 							recordRunning = true;
 						} catch (FileNotFoundException e) {
 							Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
+						} catch (InterruptedException e) {
+							Log.e(LOGTAG, "showRecordingDialog: Interrupted!");
 						}
 
 						// safe preferences:
@@ -1505,7 +1508,6 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 						edit.putInt(getString(R.string.pref_recordingStopAfterUnit), stopAfterUnit);
 						// The settings of Frame Shot
 						edit.putBoolean(getString(R.string.pref_recordingEnableShot), cb_enableShot.isChecked());
-						edit.putInt(getString(R.string.pref_recordingShotEndOn), Integer.valueOf(et_shotEndOn.getText().toString()));
 						edit.putInt(getString(R.string.pref_recordingMaxShot), Integer.valueOf(et_maxShot.getText().toString()));
 						edit.putInt(getString(R.string.pref_recordingShotInterval), Integer.valueOf(et_shotInterval.getText().toString()));
 						edit.apply();
@@ -1570,10 +1572,10 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 									int presentLoop = 0;
 									try {
 										while (frameShotLoop) {
-											while (frameShotLoop && !scheduler.isRecording()) {
+											do {
 												// Check every half second if it is still recording
 												Thread.sleep(500);
-											}
+											} while (frameShotLoop && !scheduler.isRecording());
 
 											long thisTime = System.currentTimeMillis();
 
@@ -1609,8 +1611,12 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 												recordingFile = new File(externalDir + "/" + RECORDING_DIR + "/" + filename);
 												recordingFile.getParentFile().mkdir();
 
+												// Sleep for short time to make sure the buffer is filled with signals of correct frequency.
+												Thread.sleep(150);
+
 												try {
 													scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
+													scheduler.startFrameShot();
 												} catch (FileNotFoundException e) {
 													Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
 												}
@@ -1638,6 +1644,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 	public void stopRecordingForce() {
 		// The stop recording command that stop all recording processes including the Frame Shot loop.
 		frameShotLoop = false;
+		scheduler.stopFrameShot();
 		stopRecording();
 	}
 	public void stopRecording() {

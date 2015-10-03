@@ -56,7 +56,6 @@
     <string name="pref_recordingStopAfterValue">pref_recordingStopAfterValue</string>
     <string name="pref_recordingStopAfterUnit">pref_recordingStopAfterUnit</string>
     <string name="pref_recordingEnableShot">pref_recordingEnableShot</string>
-    <string name="pref_recordingShotEndOn">pref_recordingShotEndOn</string>
     <string name="pref_recordingMaxShot">pref_recordingMaxShot</string>
     <string name="pref_recordingShotInterval">pref_recordingShotInterval</string>
     <string name="pref_hackrf_vgaRxGain">pref_hackrf_vgaRxGain</string>

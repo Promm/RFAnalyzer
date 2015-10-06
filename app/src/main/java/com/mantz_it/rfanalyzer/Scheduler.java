@@ -167,6 +167,7 @@ public class Scheduler extends Thread {
 	// The new methods to operate on the variables for frame shot
 	public void startFrameShot() { this.frameShot = true; }
 	public void stopFrameShot() { this.frameShot = false; }
+	public boolean isFrameShot() { return this.frameShot; }
 	public void frameShotEndFre( long iFreq ) { this.endingFrequence = iFreq; }
 
 	@Override
@@ -239,8 +240,9 @@ public class Scheduler extends Thread {
 					// If is doing frame shot, move window forward until reach the end.
 					fftBuffer.setFrameShot(this.frameShot);
 					if (this.frameShot) {
-						if (source.getFrequency() + source.getSampleRate() < this.endingFrequence) {
-							source.setFrequency(source.getFrequency() + 2* source.getSampleRate());
+						//Log.d(LOGTAG, "FrameShot taken for" + fftBuffer.getFrequency());
+						if (source.getFrequency() + source.getSampleRate()/2 < this.endingFrequence) {
+							source.setFrequency(source.getFrequency() + source.getSampleRate());
 						} else {
 							this.stopRecording();
 							this.frameShot = false;

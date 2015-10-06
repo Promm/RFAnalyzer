@@ -1,7 +1,17 @@
 package com.mantz_it.rfanalyzer;
 
+import android.os.Environment;
 import android.util.Log;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +61,12 @@ public class AnalyzerProcessingLoop extends Thread {
 	private ArrayBlockingQueue<SamplePacket> inputQueue = null;		// queue that delivers sample packets
 	private ArrayBlockingQueue<SamplePacket> returnQueue = null;	// queue to return unused buffers
 
+	// File to output frame shots
+	private long frameShotStart = 0;
+	private long frameShotEnd = 0;
+	private BufferedOutputStream frameOut = null;
+	private File frameFile = null;
+
 	/**
 	 * Constructor. Will initialize the member attributes.
 	 *
@@ -78,6 +94,8 @@ public class AnalyzerProcessingLoop extends Thread {
 	public int getFrameRate() {
 		return frameRate;
 	}
+
+	public void setFrameShotEnd( long frameShotEnd ) { this.frameShotEnd = frameShotEnd; }
 
 	public void setFrameRate(int frameRate) {
 		this.frameRate = frameRate;
@@ -119,6 +137,11 @@ public class AnalyzerProcessingLoop extends Thread {
 	@Override
 	public void run() {
 		Log.i(LOGTAG,"Processing loop started. (Thread: " + this.getName() + ")");
+		// The enviroment variables used for filename.
+		final String externalDir = Environment.getExternalStorageDirectory().getAbsolutePath();
+		final String RECORDING_DIR = "RFAnalyzer";
+		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US);
+
 		long startTime;		// timestamp when signal processing is started
 		long sleepTime;		// time (in ms) to sleep before the next run to meet the frame rate
 		long frequency;		// center frequency of the incoming samples
@@ -148,9 +171,63 @@ public class AnalyzerProcessingLoop extends Thread {
 			frequency = samples.getFrequency();
 			sampleRate = samples.getSampleRate();
 			frameShot = samples.getFrameShot();
+			if (frameShot) Log.i(LOGTAG, "FrameShot Open! Fre: " + frequency);
 
 			// do the signal processing:
 			this.doProcessing(samples);
+
+			try {
+				if (!pFrameShot && frameShot) {
+					// Frame shot starts, create output file
+					frameShotStart = frequency;
+					frameFile = new File(externalDir + "/" + RECORDING_DIR + "/FrameShot_"
+							+ simpleDateFormat.format(new Date()) + ".txt");
+					frameFile.getParentFile().mkdir();    // Create directory if it does not yet exist
+					frameOut = new BufferedOutputStream(new FileOutputStream(frameFile));
+
+					if (frameOut != null) {
+						// Put the start / end frequency on the first line.
+						String firstLine = Long.toString(frameShotStart) + ' '
+								+ Long.toString(this.frameShotEnd) + '\n';
+						frameOut.write(firstLine.getBytes());
+					}
+				}
+
+				if (frameShot && frameOut != null) {
+					// Put the data for this area into the file.
+					int aSize = mag.length;
+					// Make sure the output does not include the data out of range.
+					int startP = 0;
+					int endP = fftSize;
+					if (frequency - sampleRate / 2 < frameShotStart) {
+						startP = (int)Math.floor((double)
+								(frameShotStart - (frequency - sampleRate / 2)) * aSize / sampleRate);
+					}
+					if (frequency + sampleRate / 2 > frameShotEnd) {
+						endP = aSize - (int)Math.floor((double)
+								((frequency + sampleRate / 2) - frameShotEnd) * aSize / sampleRate);
+					}
+					float[] outArray = Arrays.copyOfRange(mag, startP, endP);
+					String outLine = Arrays.toString(outArray);
+					outLine = outLine.substring(1, outLine.length() -1) + '\n';
+					frameOut.write(outLine.getBytes());
+				}
+			} catch (FileNotFoundException e) {
+				Log.e(LOGTAG, "AnalyzerProcessingLoop: File not found: " + frameFile.getAbsolutePath());
+			} catch (IOException e) {
+				Log.e(LOGTAG, "run: Error while writing FrameOut: " + e.getMessage());
+			}
+
+			if (pFrameShot && !frameShot) {
+				// Time to close the file
+				try {
+					frameOut.close();
+					frameFile = null;
+					frameOut = null;
+				} catch (IOException e) {
+					Log.e(LOGTAG, "run: Error while close FrameOut: " + e.getMessage());
+				}
+			}
 
 			// return samples to the buffer pool
 			returnQueue.offer(samples);

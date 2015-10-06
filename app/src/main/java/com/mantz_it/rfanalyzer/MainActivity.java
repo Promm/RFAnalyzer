@@ -1448,55 +1448,56 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 						//todo check filename
 
 						// Set the frequency in the source:
-						if(et_frequency.getText().length() == 0)
+						if (et_frequency.getText().length() == 0)
 							return;
 						double freq = Double.valueOf(et_frequency.getText().toString());
 						if (freq < maxFreqMHz)
 							freq = freq * 1000000;
 						if (freq <= source.getMaxFrequency() && freq >= source.getMinFrequency())
-							source.setFrequency((long)freq);
+							source.setFrequency((long) freq);
 						else {
 							Toast.makeText(MainActivity.this, "Frequency is invalid!", Toast.LENGTH_LONG).show();
 							return;
 						}
 
 						// Set the sample rate (only if demodulator is off):
-						if(demodulationMode == Demodulator.DEMODULATION_OFF)
-							source.setSampleRate((Integer)sp_sampleRate.getSelectedItem());
-
-						// Open file and start recording:
-						recordingFile = new File(externalDir + "/" + RECORDING_DIR + "/" + filename);
-						recordingFile.getParentFile().mkdir();	// Create directory if it does not yet exist
+						if (demodulationMode == Demodulator.DEMODULATION_OFF)
+							source.setSampleRate((Integer) sp_sampleRate.getSelectedItem());
 
 
 						// The Frame Shot preparations
-						if (cb_enableShot.isChecked()) {
-							frameShotLoop = true;
-
-							double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
-							if (freq2 < maxFreqMHz)
-								freq2 = freq2 * 1000000;
-							if (freq2 > source.getMaxFrequency()) {
-								freq2 = source.getMaxFrequency();
-							}
-							if (freq2 < freq)
-							{
-								freq2 = freq;
-							}
-							scheduler.frameShotEndFre((long)freq2);
-						}
-
 						try {
-							// Make sure the buffer is filled with correct signals.
-							Thread.sleep(150);
-							scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
 							if (cb_enableShot.isChecked()) {
+								frameShotLoop = true;
+
+								double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
+								if (freq2 < maxFreqMHz)
+									freq2 = freq2 * 1000000;
+								if (freq2 > source.getMaxFrequency()) {
+									freq2 = source.getMaxFrequency();
+								}
+								if (freq2 < freq) {
+									freq2 = freq;
+								}
+								scheduler.frameShotEndFre((long) freq2);
+								if (analyzerProcessingLoop != null) {
+									analyzerProcessingLoop.setFrameShotEnd((long) freq2);
+								}
+								// Make sure the buffer is filled with correct signals.
+								Thread.sleep(150);
 								scheduler.startFrameShot();
+								recordRunning = true;
 							}
-							recordRunning = true;
-						} catch (FileNotFoundException e) {
+							else {
+								// Open file and start recording:
+								recordingFile = new File(externalDir + "/" + RECORDING_DIR + "/" + filename);
+								recordingFile.getParentFile().mkdir();    // Create directory if it does not yet exist
+								scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
+								recordRunning = true;
+							}
+						}catch(FileNotFoundException e){
 							Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
-						} catch (InterruptedException e) {
+						}catch(InterruptedException e){
 							Log.e(LOGTAG, "showRecordingDialog: Interrupted!");
 						}
 
@@ -1517,7 +1518,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 						updateActionBar();
 
 						// if stopAfter was selected, start thread to supervise the recording:
-						if(cb_stopAfter.isChecked()) {
+						if (cb_stopAfter.isChecked() && !cb_enableShot.isChecked()) {
 							Thread supervisorThread = new Thread() {
 								@Override
 								public void run() {
@@ -1575,7 +1576,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 											do {
 												// Check every half second if it is still recording
 												Thread.sleep(500);
-											} while (frameShotLoop && !scheduler.isRecording());
+											} while (frameShotLoop && scheduler.isFrameShot());
 
 											long thisTime = System.currentTimeMillis();
 
@@ -1596,30 +1597,17 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 												Thread.sleep(500);
 											}
 
-											if (frameShotLoop)
-											{
+											if (frameShotLoop) {
 												// Create new recording process.
 												double freq = Double.valueOf(et_frequency.getText().toString());
 												if (freq < maxFreqMHz)
 													freq = freq * 1000000;
-												source.setFrequency((long)freq);
-												if(demodulationMode == Demodulator.DEMODULATION_OFF)
-													source.setSampleRate((Integer)sp_sampleRate.getSelectedItem());
-
-												String filename = simpleDateFormat.format(new Date()) + "_" + SOURCE_NAMES[sourceType] + "_"
-														+ (long) freq + "Hz_" + sp_sampleRate.getSelectedItem() + "Sps.iq";
-												recordingFile = new File(externalDir + "/" + RECORDING_DIR + "/" + filename);
-												recordingFile.getParentFile().mkdir();
-
+												source.setFrequency((long) freq);
+												if (demodulationMode == Demodulator.DEMODULATION_OFF)
+													source.setSampleRate((Integer) sp_sampleRate.getSelectedItem());
 												// Sleep for short time to make sure the buffer is filled with signals of correct frequency.
 												Thread.sleep(150);
-
-												try {
-													scheduler.startRecording(new BufferedOutputStream(new FileOutputStream(recordingFile)));
-													scheduler.startFrameShot();
-												} catch (FileNotFoundException e) {
-													Log.e(LOGTAG, "showRecordingDialog: File not found: " + recordingFile.getAbsolutePath());
-												}
+												scheduler.startFrameShot();
 											}
 										}
 									} catch (InterruptedException e) {

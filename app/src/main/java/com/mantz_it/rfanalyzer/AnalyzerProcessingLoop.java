@@ -232,36 +232,38 @@ public class AnalyzerProcessingLoop extends Thread {
 			// return samples to the buffer pool
 			returnQueue.offer(samples);
 
-			// Push the results on the surface:
-			view.draw(mag, frequency, sampleRate, frameRate, load);
+			// To improve the frame shot speed, close the display function while taking the shot
+			if (!frameShot) {
+				// Push the results on the surface:
+				view.draw(mag, frequency, sampleRate, frameRate, load);
 
-			// Calculate the remaining time in this frame (according to the frame rate) and sleep
-			// for that time:
-			sleepTime = (1000/frameRate)-(System.currentTimeMillis() - startTime);
-			try {
-				if (sleepTime > 0) {
-					// load = processing_time / frame_duration
-					load = (System.currentTimeMillis() - startTime) / (1000.0 / frameRate);
+				// Calculate the remaining time in this frame (according to the frame rate) and sleep
+				// for that time:
+				sleepTime = (1000 / frameRate) - (System.currentTimeMillis() - startTime);
+				try {
+					if (sleepTime > 0) {
+						// load = processing_time / frame_duration
+						load = (System.currentTimeMillis() - startTime) / (1000.0 / frameRate);
 
-					// Automatic frame rate control:
-					if(dynamicFrameRate && load < LOW_THRESHOLD && frameRate < MAX_FRAMERATE)
-						frameRate++;
-					if(dynamicFrameRate && load > HIGH_THRESHOLD && frameRate > 1)
-						frameRate--;
+						// Automatic frame rate control:
+						if (dynamicFrameRate && load < LOW_THRESHOLD && frameRate < MAX_FRAMERATE)
+							frameRate++;
+						if (dynamicFrameRate && load > HIGH_THRESHOLD && frameRate > 1)
+							frameRate--;
 
-					//Log.d(LOGTAG,"FrameRate: " + frameRate + ";  Load: " + load + "; Sleep for " + sleepTime + "ms.");
-					sleep(sleepTime);
+						//Log.d(LOGTAG,"FrameRate: " + frameRate + ";  Load: " + load + "; Sleep for " + sleepTime + "ms.");
+						sleep(sleepTime);
+					} else {
+						// Automatic frame rate control:
+						if (dynamicFrameRate && frameRate > 1)
+							frameRate--;
+
+						//Log.d(LOGTAG, "Couldn't meet requested frame rate!");
+						load = 1;
+					}
+				} catch (Exception e) {
+					Log.e(LOGTAG, "Error while calling sleep()");
 				}
-				else {
-					// Automatic frame rate control:
-					if(dynamicFrameRate && frameRate > 1)
-						frameRate--;
-
-					//Log.d(LOGTAG, "Couldn't meet requested frame rate!");
-					load = 1;
-				}
-			} catch (Exception e) {
-				Log.e(LOGTAG,"Error while calling sleep()");
 			}
 			pFrameShot = frameShot;
 		}

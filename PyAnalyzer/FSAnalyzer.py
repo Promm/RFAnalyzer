@@ -87,7 +87,7 @@ for files in os.listdir(inputDir):
             hScale = (maxA - minA) / height
             prevFreq = startF - 1
             for ind, hgt in enumerate(colQue):
-                hgt = int((hgt - minA) // hScale)
+                hgt = min(int((hgt - minA) // hScale), height)
                 for i in range(hgt):
                     pixels[ind, i] = (255, 0, 0)
 

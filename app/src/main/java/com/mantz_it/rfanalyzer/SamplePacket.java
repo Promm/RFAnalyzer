@@ -30,7 +30,7 @@ public class SamplePacket {
 	private float[] im;			// imag values
 	private long frequency;		// center frequency
 	private int sampleRate;		// sample rate
-	private boolean frameShot;	// Is taking frame shot
+	private int frameShot;	// Is taking frame shot
 	private int size;			// number of samples in this packet
 
 	/**
@@ -66,7 +66,7 @@ public class SamplePacket {
 		this.frequency = frequency;
 		this.sampleRate = sampleRate;
 		this.size = size;
-		this.frameShot = false;
+		this.frameShot = 0;
 	}
 
 	/**
@@ -80,7 +80,7 @@ public class SamplePacket {
 		this.frequency = 0;
 		this.sampleRate = 0;
 		this.size = 0;
-		this.frameShot = false;
+		this.frameShot = 0;
 	}
 
 	/**
@@ -170,6 +170,6 @@ public class SamplePacket {
 	}
 
 	// Set / Get frame shot status.
-	public void setFrameShot(boolean flag) { this.frameShot = flag; }
-	public boolean getFrameShot() { return this.frameShot; }
+	public void setFrameShot(int fShot) { this.frameShot = fShot; }
+	public int getFrameShot() { return this.frameShot; }
 }

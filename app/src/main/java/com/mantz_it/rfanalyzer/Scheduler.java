@@ -60,7 +60,7 @@ public class Scheduler extends Thread {
 	private static final String LOGTAG = "Scheduler";
 
 	// The variables for frame shots.
-	private boolean frameShot = false;
+	private int frameShot = 0;
 	private long endingFrequence = 0;
 
 	public Scheduler(int fftSize, IQSourceInterface source) {
@@ -165,9 +165,9 @@ public class Scheduler extends Thread {
 	}
 
 	// The new methods to operate on the variables for frame shot
-	public void startFrameShot() { this.frameShot = true; }
-	public void stopFrameShot() { this.frameShot = false; }
-	public boolean isFrameShot() { return this.frameShot; }
+	public void startFrameShot() { this.frameShot = 1; }
+	public void stopFrameShot() { this.frameShot = 0; }
+	public int isFrameShot() { return this.frameShot; }
 	public void frameShotEndFre( long iFreq ) { this.endingFrequence = iFreq; }
 
 	@Override
@@ -239,13 +239,20 @@ public class Scheduler extends Thread {
 				if(fftBuffer.capacity() == fftBuffer.size()) {
 					// If is doing frame shot, move window forward until reach the end.
 					fftBuffer.setFrameShot(this.frameShot);
-					if (this.frameShot) {
+					if (this.frameShot != 0) {
+						// Overlap two windows with both using their 2/3 of the data to remove DC in the middle
 						//Log.d(LOGTAG, "FrameShot taken for" + fftBuffer.getFrequency());
-						if (source.getFrequency() + source.getSampleRate()/2 < this.endingFrequence) {
+						if (this.frameShot == 1 &&
+								source.getFrequency() - source.getSampleRate() / 6 < this.endingFrequence) {
+							this.frameShot = 2;
+							source.setFrequency(source.getFrequency() + source.getSampleRate() / 3);
+						} else if (this.frameShot == 2 &&
+								source.getFrequency() + source.getSampleRate()/2 < this.endingFrequence) {
+							this.frameShot = 1;
 							source.setFrequency(source.getFrequency() + source.getSampleRate());
 						} else {
 							this.stopRecording();
-							this.frameShot = false;
+							this.frameShot = 0;
 						}
 					}
 

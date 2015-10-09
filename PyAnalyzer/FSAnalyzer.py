@@ -8,8 +8,8 @@ outputDir = 'Output'
 scaleSize = 500000000
 widthPreference = 0
 heightPreference = 0
-maxPreference = None
-minPreference = None
+maxPreference = -34
+minPreference = -44
 mixMode = 'average'
 MIX_MODES = ['max', 'average']
 
@@ -84,6 +84,7 @@ for files in os.listdir(inputDir):
                 maxA = maxPreference
             if minPreference is not None:
                 minA = minPreference
+            print "Amplitude changes from {0} to {1}".format(minA, maxA)
             hScale = (maxA - minA) / height
             prevFreq = startF - 1
             for ind, hgt in enumerate(colQue):

@@ -1576,7 +1576,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 											do {
 												// Check every half second if it is still recording
 												Thread.sleep(500);
-											} while (frameShotLoop && scheduler.isFrameShot());
+											} while (frameShotLoop && scheduler.isFrameShot() != 0);
 
 											long thisTime = System.currentTimeMillis();
 

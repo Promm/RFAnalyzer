@@ -64,6 +64,7 @@ public class AnalyzerProcessingLoop extends Thread {
 	// File to output frame shots
 	private long frameShotStart = 0;
 	private long frameShotEnd = 0;
+	private float[] shotFragment = null;
 	private BufferedOutputStream frameOut = null;
 	private File frameFile = null;
 
@@ -146,8 +147,8 @@ public class AnalyzerProcessingLoop extends Thread {
 		long sleepTime;		// time (in ms) to sleep before the next run to meet the frame rate
 		long frequency;		// center frequency of the incoming samples
 		int sampleRate;		// sample rate of the incoming samples
-		boolean frameShot = false;	// Whether it is taking frameShot;
-		boolean pFrameShot = false;	// Whether it was taking frameShot in last buffer.
+		int frameShot = 0;	// Whether it is taking frameShot;
+		int pFrameShot = 0;	// Whether it was taking frameShot in last buffer.
 									// Used to decide where to start and stop.
 
 		while(!stopRequested) {
@@ -171,13 +172,13 @@ public class AnalyzerProcessingLoop extends Thread {
 			frequency = samples.getFrequency();
 			sampleRate = samples.getSampleRate();
 			frameShot = samples.getFrameShot();
-			if (frameShot) Log.i(LOGTAG, "FrameShot Open! Fre: " + frequency);
+			if (frameShot != 0) Log.i(LOGTAG, "FrameShot Open! Fre: " + frequency);
 
 			// do the signal processing:
 			this.doProcessing(samples);
 
 			try {
-				if (!pFrameShot && frameShot) {
+				if (pFrameShot == 0 && frameShot != 0) {
 					// Frame shot starts, create output file
 					frameShotStart = frequency;
 					frameFile = new File(externalDir + "/" + RECORDING_DIR + "/FrameShot_"
@@ -188,29 +189,61 @@ public class AnalyzerProcessingLoop extends Thread {
 					if (frameOut != null) {
 						// Put the start / end frequency on the first line.
 						String firstLine = Long.toString(frameShotStart) + ' '
-								+ Long.toString(this.frameShotEnd) + '\n';
+								+ Long.toString(this.frameShotEnd) + ' '
+								+ Integer.toString(sampleRate) + '\n';
 						frameOut.write(firstLine.getBytes());
 					}
 				}
 
-				if (frameShot && frameOut != null) {
+				if (frameShot != 0 && frameOut != null) {
 					// Put the data for this area into the file.
 					int aSize = mag.length;
 					// Make sure the output does not include the data out of range.
-					int startP = 0;
-					int endP = fftSize;
-					if (frequency - sampleRate / 2 < frameShotStart) {
-						startP = (int)Math.floor((double)
-								(frameShotStart - (frequency - sampleRate / 2)) * aSize / sampleRate);
+					if (frameShot == 2 && pFrameShot == 2) {
+						Log.e(LOGTAG, "Error happened, two sequential 2 at " + frequency);
+					} else {
+						if (frameShot == 1 && pFrameShot == 1) {
+							Log.e(LOGTAG, "Error happened, two Sequencial 1 at " + frequency);
+						}
+						if (frameShot == 1) {
+							int startP = 0;
+							int endP = aSize / 3;
+							if (frequency - sampleRate / 2 < frameShotStart) {
+								startP = (int) Math.floor((double)
+										(frameShotStart - (frequency - sampleRate / 2)) * aSize / sampleRate);
+							}
+							if (frequency - sampleRate / 6 > frameShotEnd) {
+								endP = aSize - (int) Math.floor((double)
+										((frequency - sampleRate / 6) - frameShotEnd) * aSize / 3 / sampleRate);
+							}
+							if (startP < endP) {
+								float[] outArray = Arrays.copyOfRange(mag, startP, endP);
+								String outLine = Arrays.toString(outArray);
+								outLine = outLine.substring(1, outLine.length() - 1) + '\n';
+								frameOut.write(outLine.getBytes());
+							}
+							shotFragment = Arrays.copyOfRange(mag, aSize * 2 / 3, aSize);
+						} else if (frameShot == 2) {
+							int startP = 0;
+							int endP = aSize;
+							if (frequency - sampleRate / 2 < frameShotStart) {
+								startP = (int) Math.floor((double)
+										(frameShotStart - (frequency - sampleRate / 2)) * aSize / sampleRate);
+							}
+							if (frequency + sampleRate / 2 > frameShotEnd) {
+								endP = aSize - (int) Math.floor((double)
+										((frequency + sampleRate / 2) - frameShotEnd) * aSize / sampleRate);
+							}
+							float[] connectedArray = new float[aSize];
+							System.arraycopy(mag, 0, connectedArray, 0, aSize * 2 / 3 - aSize / 3);
+							System.arraycopy(shotFragment, 0, connectedArray, aSize*2/3 - aSize/3, shotFragment.length);
+							System.arraycopy(mag, aSize - aSize / 3, connectedArray, aSize - aSize / 3, aSize / 3);
+							float[] outArray = Arrays.copyOfRange(connectedArray, startP, endP);
+							String outLine = Arrays.toString(outArray);
+							outLine = outLine.substring(1, outLine.length() - 1) + '\n';
+							frameOut.write(outLine.getBytes());
+						}
 					}
-					if (frequency + sampleRate / 2 > frameShotEnd) {
-						endP = aSize - (int)Math.floor((double)
-								((frequency + sampleRate / 2) - frameShotEnd) * aSize / sampleRate);
-					}
-					float[] outArray = Arrays.copyOfRange(mag, startP, endP);
-					String outLine = Arrays.toString(outArray);
-					outLine = outLine.substring(1, outLine.length() -1) + '\n';
-					frameOut.write(outLine.getBytes());
 				}
 			} catch (FileNotFoundException e) {
 				Log.e(LOGTAG, "AnalyzerProcessingLoop: File not found: " + frameFile.getAbsolutePath());
@@ -218,7 +251,7 @@ public class AnalyzerProcessingLoop extends Thread {
 				Log.e(LOGTAG, "run: Error while writing FrameOut: " + e.getMessage());
 			}
 
-			if (pFrameShot && !frameShot) {
+			if (pFrameShot != 0 && frameShot == 0) {
 				// Time to close the file
 				try {
 					frameOut.close();
@@ -233,7 +266,7 @@ public class AnalyzerProcessingLoop extends Thread {
 			returnQueue.offer(samples);
 
 			// To improve the frame shot speed, close the display function while taking the shot
-			if (!frameShot) {
+			if (frameShot == 0) {
 				// Push the results on the surface:
 				view.draw(mag, frequency, sampleRate, frameRate, load);
 

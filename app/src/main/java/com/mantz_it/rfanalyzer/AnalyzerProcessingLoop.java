@@ -9,7 +9,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -67,6 +66,7 @@ public class AnalyzerProcessingLoop extends Thread {
 	private float[] shotFragment = null;
 	private BufferedOutputStream frameOut = null;
 	private File frameFile = null;
+	private int fMaxSize = 16384;
 
 	/**
 	 * Constructor. Will initialize the member attributes.
@@ -85,6 +85,7 @@ public class AnalyzerProcessingLoop extends Thread {
 		if(fftSize != (1<<order))
 			throw new IllegalArgumentException("FFT size must be power of 2");
 		this.fftSize = fftSize;
+		this.fMaxSize = Math.min(fMaxSize, fftSize * 2);
 
 		this.fftBlock = new FFT(fftSize);
 		this.mag = new float[fftSize];
@@ -174,9 +175,6 @@ public class AnalyzerProcessingLoop extends Thread {
 			frameShot = samples.getFrameShot();
 			if (frameShot != 0) Log.i(LOGTAG, "FrameShot Open! Fre: " + frequency);
 
-			// do the signal processing:
-			this.doProcessing(samples);
-
 			try {
 				if (pFrameShot == 0 && frameShot != 0) {
 					// Frame shot starts, create output file
@@ -190,14 +188,14 @@ public class AnalyzerProcessingLoop extends Thread {
 						// Put the start / end frequency on the first line.
 						String firstLine = Long.toString(frameShotStart) + ' '
 								+ Long.toString(this.frameShotEnd) + ' '
-								+ Integer.toString(sampleRate) + '\n';
+								+ Integer.toString(sampleRate) + ' '
+								+ Integer.toString(this.fftSize * 2) + '\n';
 						frameOut.write(firstLine.getBytes());
 					}
 				}
 
 				if (frameShot != 0 && frameOut != null) {
 					// Put the data for this area into the file.
-					int aSize = mag.length;
 					// Make sure the output does not include the data out of range.
 					if (frameShot == 2 && pFrameShot == 2) {
 						Log.e(LOGTAG, "Error happened, two sequential 2 at " + frequency);
@@ -205,7 +203,9 @@ public class AnalyzerProcessingLoop extends Thread {
 						if (frameShot == 1 && pFrameShot == 1) {
 							Log.e(LOGTAG, "Error happened, two Sequencial 1 at " + frequency);
 						}
+						/* Old version that needs fft first and then record float to string data
 						if (frameShot == 1) {
+							int aSize = mag.length;
 							int startP = 0;
 							int endP = aSize / 3;
 							if (frequency - sampleRate / 2 < frameShotStart) {
@@ -243,6 +243,8 @@ public class AnalyzerProcessingLoop extends Thread {
 							outLine = outLine.substring(1, outLine.length() - 1) + '\n';
 							frameOut.write(outLine.getBytes());
 						}
+						*/
+						frameOut.write(samples.getOrigin(), 0, this.fMaxSize);
 					}
 				}
 			} catch (FileNotFoundException e) {
@@ -262,6 +264,10 @@ public class AnalyzerProcessingLoop extends Thread {
 				}
 			}
 
+			if (frameShot == 0) {
+				// do the signal processing:
+				this.doProcessing(samples);
+			}
 			// return samples to the buffer pool
 			returnQueue.offer(samples);
 

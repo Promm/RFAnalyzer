@@ -28,9 +28,10 @@ package com.mantz_it.rfanalyzer;
 public class SamplePacket {
 	private float[] re;			// real values
 	private float[] im;			// imag values
+	private byte[] origin;		// The original packet data (If using multiple, record the last one)
 	private long frequency;		// center frequency
 	private int sampleRate;		// sample rate
-	private int frameShot;	// Is taking frame shot
+	private int frameShot;		// Is taking frame shot
 	private int size;			// number of samples in this packet
 
 	/**
@@ -67,6 +68,7 @@ public class SamplePacket {
 		this.sampleRate = sampleRate;
 		this.size = size;
 		this.frameShot = 0;
+		this.origin = null;
 	}
 
 	/**
@@ -81,6 +83,7 @@ public class SamplePacket {
 		this.sampleRate = 0;
 		this.size = 0;
 		this.frameShot = 0;
+		this.origin = null;
 	}
 
 	/**
@@ -172,4 +175,6 @@ public class SamplePacket {
 	// Set / Get frame shot status.
 	public void setFrameShot(int fShot) { this.frameShot = fShot; }
 	public int getFrameShot() { return this.frameShot; }
+	public void setOrigin(byte[] packet) { this.origin = packet; }
+	public byte[] getOrigin() { return this.origin; }
 }

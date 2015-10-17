@@ -1424,7 +1424,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		// default variables for Frame shot
 		cb_enableShot.toggle();
 		cb_enableShot.setChecked(preferences.getBoolean(getString(R.string.pref_recordingEnableShot), false));
-		et_shotEndOn.setText(et_frequency.getText());
+		et_shotEndOn.setText("" + preferences.getLong(getString(R.string.pref_recordingShotEnding), 6000000000l));
 		et_maxShot.setText("" + preferences.getInt(getString(R.string.pref_recordingMaxShot), 0));
 		et_shotInterval.setText("" + preferences.getInt(getString(R.string.pref_recordingShotInterval), 0));
 
@@ -1508,9 +1508,11 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 						edit.putInt(getString(R.string.pref_recordingStopAfterValue), stopAfterValue);
 						edit.putInt(getString(R.string.pref_recordingStopAfterUnit), stopAfterUnit);
 						// The settings of Frame Shot
+						edit.putLong(getString(R.string.pref_recordingShotEnding), Long.valueOf(et_shotEndOn.getText().toString()));
 						edit.putBoolean(getString(R.string.pref_recordingEnableShot), cb_enableShot.isChecked());
 						edit.putInt(getString(R.string.pref_recordingMaxShot), Integer.valueOf(et_maxShot.getText().toString()));
 						edit.putInt(getString(R.string.pref_recordingShotInterval), Integer.valueOf(et_shotInterval.getText().toString()));
+
 						edit.apply();
 
 						analyzerSurface.setRecordingEnabled(true);

@@ -58,6 +58,7 @@
     <string name="pref_recordingEnableShot">pref_recordingEnableShot</string>
     <string name="pref_recordingMaxShot">pref_recordingMaxShot</string>
     <string name="pref_recordingShotInterval">pref_recordingShotInterval</string>
+    <string name="pref_recordingShotEnding">pref_recordingShotEnding</string>
     <string name="pref_hackrf_vgaRxGain">pref_hackrf_vgaRxGain</string>
     <string name="pref_hackrf_lnaGain">pref_hackrf_lnaGain</string>
     <string name="pref_rtlsdr_manual_gain">pref_rtlsdr_manual_gain</string>

@@ -62,9 +62,11 @@ public class Scheduler extends Thread {
 	// The variables for frame shots.
 	private int frameShot = 0;
 	private long endingFrequence = 0;
+	private int fOutputSize = 16384;
 
 	public Scheduler(int fftSize, IQSourceInterface source) {
 		this.source = source;
+		this.fOutputSize = Math.min(2*fftSize, fOutputSize);
 
 		// Create the fft input- and output queues and allocate the buffer packets.
 		this.fftOutputQueue = new ArrayBlockingQueue<SamplePacket>(FFT_QUEUE_SIZE);
@@ -186,6 +188,28 @@ public class Scheduler extends Thread {
 				break;
 			}
 
+			if (this.frameShot != 0) {
+				// To deal with the problem that frames takent too fast to get all zeros
+				boolean allZeroR = true;
+				boolean allZeroL = true;
+				for (int i = 0; i <= 10; ++i) {
+					if (packet[i] != packet[i + 1]) {
+						allZeroL = false;
+						break;
+					}
+				}
+				for (int i = fOutputSize; i >= fOutputSize - 10; --i) {
+					if (packet[i] != packet[i - 1]) {
+						allZeroR = false;
+						break;
+					}
+				}
+				if (allZeroL || allZeroR) {
+					Log.e(LOGTAG, "all 0 happend at " + source.getFrequency() + "Hz, try getting again...");
+					continue;
+				}
+			}
+
 			///// Recording ////////////////////////////////////////////////////////////////////////
 			if(bufferedOutputStream != null) {
 				try {
@@ -232,32 +256,39 @@ public class Scheduler extends Thread {
 			// If we got a buffer, fill it!
 			if(fftBuffer != null)
 			{
-				// fill the packet into the buffer:
-				source.fillPacketIntoSamplePacket(packet,fftBuffer);
+				fftBuffer.setFrameShot(this.frameShot);
+				// Directly pass the packet data to the buffer
+				fftBuffer.setOrigin(packet);
 
-				// check if the buffer is now full and if so: deliver it to the output queue
-				if(fftBuffer.capacity() == fftBuffer.size()) {
-					// If is doing frame shot, move window forward until reach the end.
-					fftBuffer.setFrameShot(this.frameShot);
-					if (this.frameShot != 0) {
-						// Overlap two windows with both using their 2/3 of the data to remove DC in the middle
-						//Log.d(LOGTAG, "FrameShot taken for" + fftBuffer.getFrequency());
-						if (this.frameShot == 1 &&
-								source.getFrequency() - source.getSampleRate() / 6 < this.endingFrequence) {
-							this.frameShot = 2;
-							source.setFrequency(source.getFrequency() + source.getSampleRate() / 3);
-						} else if (this.frameShot == 2 &&
-								source.getFrequency() + source.getSampleRate()/2 < this.endingFrequence) {
-							this.frameShot = 1;
-							source.setFrequency(source.getFrequency() + source.getSampleRate());
-						} else {
-							this.stopRecording();
-							this.frameShot = 0;
-						}
-					}
-
+				// If is taking frame shot, skip the byte to float operation
+				if(this.frameShot != 0) {
+					fftBuffer.setFrequency(source.getFrequency());
+					fftBuffer.setSampleRate(source.getSampleRate());
 					fftOutputQueue.offer(fftBuffer);
 					fftBuffer = null;
+					// Overlap two windows with both using their 2/3 of the data to remove DC in the middle
+					if (this.frameShot == 1 &&
+							source.getFrequency() - source.getSampleRate() / 6 < this.endingFrequence) {
+						this.frameShot = 2;
+						source.setFrequency(source.getFrequency() + source.getSampleRate() / 3);
+					} else if (this.frameShot == 2 &&
+							source.getFrequency() + source.getSampleRate() / 2 < this.endingFrequence) {
+						this.frameShot = 1;
+						source.setFrequency(source.getFrequency() + source.getSampleRate());
+					} else {
+						this.stopRecording();
+						this.frameShot = 0;
+					}
+				}
+				else {
+					// fill the packet into the buffer:
+					source.fillPacketIntoSamplePacket(packet, fftBuffer);
+
+					// check if the buffer is now full and if so: deliver it to the output queue
+					if (fftBuffer.capacity() == fftBuffer.size()) {
+						fftOutputQueue.offer(fftBuffer);
+						fftBuffer = null;
+					}
 				}
 				// otherwise we would just go for another round...
 			}

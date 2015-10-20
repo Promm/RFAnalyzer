@@ -188,28 +188,6 @@ public class Scheduler extends Thread {
 				break;
 			}
 
-			if (this.frameShot != 0) {
-				// To deal with the problem that frames takent too fast to get all zeros
-				boolean allZeroR = true;
-				boolean allZeroL = true;
-				for (int i = 0; i <= 10; ++i) {
-					if (packet[i] != packet[i + 1]) {
-						allZeroL = false;
-						break;
-					}
-				}
-				for (int i = fOutputSize; i >= fOutputSize - 10; --i) {
-					if (packet[i] != packet[i - 1]) {
-						allZeroR = false;
-						break;
-					}
-				}
-				if (allZeroL || allZeroR) {
-					Log.e(LOGTAG, "all 0 happend at " + source.getFrequency() + "Hz, try getting again...");
-					continue;
-				}
-			}
-
 			///// Recording ////////////////////////////////////////////////////////////////////////
 			if(bufferedOutputStream != null) {
 				try {

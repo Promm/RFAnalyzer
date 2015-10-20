@@ -203,48 +203,10 @@ public class AnalyzerProcessingLoop extends Thread {
 						if (frameShot == 1 && pFrameShot == 1) {
 							Log.e(LOGTAG, "Error happened, two Sequencial 1 at " + frequency);
 						}
-						/* Old version that needs fft first and then record float to string data
-						if (frameShot == 1) {
-							int aSize = mag.length;
-							int startP = 0;
-							int endP = aSize / 3;
-							if (frequency - sampleRate / 2 < frameShotStart) {
-								startP = (int) Math.floor((double)
-										(frameShotStart - (frequency - sampleRate / 2)) * aSize / sampleRate);
-							}
-							if (frequency - sampleRate / 6 > frameShotEnd) {
-								endP = aSize - (int) Math.floor((double)
-										((frequency - sampleRate / 6) - frameShotEnd) * aSize / 3 / sampleRate);
-							}
-							if (startP < endP) {
-								float[] outArray = Arrays.copyOfRange(mag, startP, endP);
-								String outLine = Arrays.toString(outArray);
-								outLine = outLine.substring(1, outLine.length() - 1) + '\n';
-								frameOut.write(outLine.getBytes());
-							}
-							shotFragment = Arrays.copyOfRange(mag, aSize * 2 / 3, aSize);
-						} else if (frameShot == 2) {
-							int startP = 0;
-							int endP = aSize;
-							if (frequency - sampleRate / 2 < frameShotStart) {
-								startP = (int) Math.floor((double)
-										(frameShotStart - (frequency - sampleRate / 2)) * aSize / sampleRate);
-							}
-							if (frequency + sampleRate / 2 > frameShotEnd) {
-								endP = aSize - (int) Math.floor((double)
-										((frequency + sampleRate / 2) - frameShotEnd) * aSize / sampleRate);
-							}
-							float[] connectedArray = new float[aSize];
-							System.arraycopy(mag, 0, connectedArray, 0, aSize * 2 / 3 - aSize / 3);
-							System.arraycopy(shotFragment, 0, connectedArray, aSize*2/3 - aSize/3, shotFragment.length);
-							System.arraycopy(mag, aSize - aSize / 3, connectedArray, aSize - aSize / 3, aSize / 3);
-							float[] outArray = Arrays.copyOfRange(connectedArray, startP, endP);
-							String outLine = Arrays.toString(outArray);
-							outLine = outLine.substring(1, outLine.length() - 1) + '\n';
-							frameOut.write(outLine.getBytes());
-						}
-						*/
 						frameOut.write(samples.getOrigin(), 0, this.fMaxSize);
+						try {
+							sleep(7);
+						} catch (InterruptedException e) {}
 					}
 				}
 			} catch (FileNotFoundException e) {

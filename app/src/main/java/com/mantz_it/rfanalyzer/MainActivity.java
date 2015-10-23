@@ -3,10 +3,12 @@ package com.mantz_it.rfanalyzer;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.location.LocationManager;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -96,11 +98,17 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 	private boolean frameShotLoop = false;
 	private boolean recordRunning = false;
 
+	// The geo information for frame shot
+	public LocationManager loc = null;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		this.savedInstanceState = savedInstanceState;
+
+		// Set locationManager
+		loc = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
 		// Set default Settings on first run:
 		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
@@ -832,7 +840,8 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 				analyzerSurface, 			// Reference to the Analyzer Surface
 				fftSize,					// FFT size
 				scheduler.getFftOutputQueue(), // Reference to the input queue for the processing loop
-				scheduler.getFftInputQueue()); // Reference to the buffer-pool-return queue
+				scheduler.getFftInputQueue(),
+				loc); // Reference to the buffer-pool-return queue
 		if(dynamicFrameRate)
 			analyzerProcessingLoop.setDynamicFrameRate(true);
 		else {
@@ -1378,32 +1387,6 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
 			}
 		});
-
-		/*
-		et_shotEndOn.addTextChangedListener(new TextWatcher() {
-			@Override
-			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-			}
-
-			@Override
-			public void onTextChanged(CharSequence s, int start, int before, int count) {
-			}
-
-			@Override
-			public void afterTextChanged(Editable s) {
-				// The ending frequency should not be smaller than the starting frequency
-				if (et_shotEndOn.getText().length() == 0 || et_frequency.getText().length() == 0)
-					return;
-				double freq1 = Double.valueOf(et_frequency.getText().toString());
-				if (freq1 < maxFreqMHz)
-					freq1 = freq1 * 1000000;
-				double freq2 = Double.valueOf(et_shotEndOn.getText().toString());
-				if (freq2 < maxFreqMHz)
-					freq2 = freq2 * 1000000;
-				if (freq1 > freq2)
-					et_shotEndOn.setText(et_frequency.getText());
-			}
-		});*/
 
 		// Set default frequency, sample rate and stop after values:
 		et_frequency.setText("" + analyzerSurface.getVirtualFrequency());

@@ -1,5 +1,9 @@
 package com.mantz_it.rfanalyzer;
 
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 
@@ -63,10 +67,35 @@ public class AnalyzerProcessingLoop extends Thread {
 	// File to output frame shots
 	private long frameShotStart = 0;
 	private long frameShotEnd = 0;
-	private float[] shotFragment = null;
 	private BufferedOutputStream frameOut = null;
 	private File frameFile = null;
 	private int fMaxSize = 16384;
+	private LocationManager loc = null;
+	private double longitude = 0.0;
+	private double latitude = 0.0;
+
+	private class MyLL implements LocationListener {
+		@Override
+		public void onLocationChanged(Location location) {
+			longitude = location.getLongitude();
+			latitude = location.getLatitude();
+		}
+
+		@Override
+		public void onStatusChanged(String s, int i, Bundle bundle) {
+
+		}
+
+		@Override
+		public void onProviderEnabled(String s) {
+
+		}
+
+		@Override
+		public void onProviderDisabled(String s) {
+
+		}
+	}
 
 	/**
 	 * Constructor. Will initialize the member attributes.
@@ -91,6 +120,14 @@ public class AnalyzerProcessingLoop extends Thread {
 		this.mag = new float[fftSize];
 		this.inputQueue = inputQueue;
 		this.returnQueue = returnQueue;
+	}
+
+	public AnalyzerProcessingLoop(AnalyzerSurface view, int fftSize,
+								  ArrayBlockingQueue<SamplePacket> inputQueue,
+								  ArrayBlockingQueue<SamplePacket> returnQueue,
+								  LocationManager locationManager) {
+		this(view, fftSize, inputQueue, returnQueue);
+		loc = locationManager;
 	}
 
 	public int getFrameRate() {
@@ -139,10 +176,10 @@ public class AnalyzerProcessingLoop extends Thread {
 	@Override
 	public void run() {
 		Log.i(LOGTAG,"Processing loop started. (Thread: " + this.getName() + ")");
-		// The enviroment variables used for filename.
+		// The environment variables used for filename.
 		final String externalDir = Environment.getExternalStorageDirectory().getAbsolutePath();
 		final String RECORDING_DIR = "RFAnalyzer";
-		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US);
+		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.US);
 
 		long startTime;		// timestamp when signal processing is started
 		long sleepTime;		// time (in ms) to sleep before the next run to meet the frame rate
@@ -151,6 +188,7 @@ public class AnalyzerProcessingLoop extends Thread {
 		int frameShot = 0;	// Whether it is taking frameShot;
 		int pFrameShot = 0;	// Whether it was taking frameShot in last buffer.
 									// Used to decide where to start and stop.
+		String filePrefix = "";	// Used for further name changing.
 
 		while(!stopRequested) {
 			// store the current timestamp
@@ -179,8 +217,9 @@ public class AnalyzerProcessingLoop extends Thread {
 				if (pFrameShot == 0 && frameShot != 0) {
 					// Frame shot starts, create output file
 					frameShotStart = frequency;
-					frameFile = new File(externalDir + "/" + RECORDING_DIR + "/FrameShot_"
-							+ simpleDateFormat.format(new Date()) + ".txt");
+					filePrefix = externalDir + "/" + RECORDING_DIR + "/FS_"
+							+ simpleDateFormat.format(new Date());
+					frameFile = new File(filePrefix + ".iq");
 					frameFile.getParentFile().mkdir();    // Create directory if it does not yet exist
 					frameOut = new BufferedOutputStream(new FileOutputStream(frameFile));
 
@@ -219,6 +258,29 @@ public class AnalyzerProcessingLoop extends Thread {
 				// Time to close the file
 				try {
 					frameOut.close();
+					/*
+					// Change file name with the GPS info
+					if (loc != null) {
+						final File fromFile = frameFile;
+						final String filePF = filePrefix;
+						Thread supervisorThread = new Thread() {
+							@Override
+							public void run() {
+								longitude = 0.0;
+								latitude = 0.0;
+								MyLL ll = new MyLL();
+								Looper.prepare();
+								loc.requestSingleUpdate(LocationManager.GPS_PROVIDER, ll, null);
+								Location lc = loc.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+								longitude = lc.getLongitude();
+								latitude = lc.getLatitude();
+								loc.removeUpdates(ll);
+								fromFile.renameTo(new File(filePF + '_' + latitude + '_' + longitude + ".iq"));
+							}
+						};
+						supervisorThread.start();
+					}
+					*/
 					frameFile = null;
 					frameOut = null;
 				} catch (IOException e) {

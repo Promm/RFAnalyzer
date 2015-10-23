@@ -25,7 +25,7 @@ print 'Getting the txt files in "' + inputDir +'" for input frame shots...'
 for files in os.listdir(inputDir):
     path = os.path.join(inputDir, files)
     if not os.path.isdir(path):
-        if files[files.rfind('.'):] == '.txt':
+        if files[files.rfind('.'):] == '.iq':
             # Only operate on txt file
             print 'Operating on ' + path
             ampQue = []

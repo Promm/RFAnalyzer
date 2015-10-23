@@ -8,6 +8,10 @@
     <!-- Internet is used to connect to local and remote rtl_tcp instances -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- GPS is used to find the location the frame shot is token -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"

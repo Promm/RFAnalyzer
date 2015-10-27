@@ -2,17 +2,19 @@ from __future__ import division
 import os
 import math
 import copy
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 from struct import unpack
 
 inputDir = 'Input'
 midputDir = 'Midput'
 outputDir = 'Output'
 scaleSize = 500000000
+sScaleSize = 100000000
+markScale = 1000000000
 widthPreference = 0
 heightPreference = 0
 maxPreference = -25
-minPreference = -50
+minPreference = -45
 mixMode = 'average'
 MIX_MODES = ['max', 'average']
 openMidput = True
@@ -195,6 +197,7 @@ for files in os.listdir(inputDir):
                 print "Error: min amplitude is equal to max amplitude"
                 continue
             prevFreq = startF - 1
+            scaleArray = []
             for ind, hgt in enumerate(colQue):
                 hgt = min(int((hgt - minA) // hScale), height)
                 for i in range(hgt):
@@ -203,13 +206,28 @@ for files in os.listdir(inputDir):
                 # Display the scale
                 freq = int(math.floor(ind * (endF - startF) / width + 0.5)) + startF
                 if (freq // scaleSize != prevFreq // scaleSize):
-                    for i in range(int(height // 20)):
+                    for i in range(int(height // 10)):
                         if (pixels[ind, i] == (100, 100, 100)):
                             pixels[ind, i] = (255, 255, 255)
                         else:
                             pixels[ind, i] = (0, 0, 0)
+                    scaleArray.append([ind, freq, 0])
+                elif (freq // sScaleSize != prevFreq // sScaleSize):
+                    for i in range(int(height // 25)):
+                        if (pixels[ind, i] == (100, 100, 100)):
+                            pixels[ind, i] = (255, 255, 255)
+                        else:
+                            pixels[ind, i] = (0, 0, 0)
+                    scaleArray.append([ind, freq, 1])
                 prevFreq = freq
             imgOut = imgOut.transpose(Image.FLIP_TOP_BOTTOM)
+
+            # Add Text
+            d = ImageDraw.Draw(imgOut)
+            fnt = ImageFont.load_default()
+            textPos = [height * 8 // 9, height * 20 // 21]
+            for i in scaleArray:
+                d.text((i[0], textPos[i[2]]), "{0:.1f}".format(i[1]/markScale), font=fnt, fill=(255, 0, 0))
 
             try:
                 # Create output dir if not exists

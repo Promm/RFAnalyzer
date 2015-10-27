@@ -1,9 +1,8 @@
 package com.mantz_it.rfanalyzer;
 
+import android.location.Criteria;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 
@@ -71,31 +70,7 @@ public class AnalyzerProcessingLoop extends Thread {
 	private File frameFile = null;
 	private int fMaxSize = 16384;
 	private LocationManager loc = null;
-	private double longitude = 0.0;
-	private double latitude = 0.0;
-
-	private class MyLL implements LocationListener {
-		@Override
-		public void onLocationChanged(Location location) {
-			longitude = location.getLongitude();
-			latitude = location.getLatitude();
-		}
-
-		@Override
-		public void onStatusChanged(String s, int i, Bundle bundle) {
-
-		}
-
-		@Override
-		public void onProviderEnabled(String s) {
-
-		}
-
-		@Override
-		public void onProviderDisabled(String s) {
-
-		}
-	}
+	private Criteria crit = null;
 
 	/**
 	 * Constructor. Will initialize the member attributes.
@@ -125,9 +100,11 @@ public class AnalyzerProcessingLoop extends Thread {
 	public AnalyzerProcessingLoop(AnalyzerSurface view, int fftSize,
 								  ArrayBlockingQueue<SamplePacket> inputQueue,
 								  ArrayBlockingQueue<SamplePacket> returnQueue,
-								  LocationManager locationManager) {
+								  LocationManager locationManager,
+								  Criteria criteria) {
 		this(view, fftSize, inputQueue, returnQueue);
 		loc = locationManager;
+		crit = criteria;
 	}
 
 	public int getFrameRate() {
@@ -219,6 +196,16 @@ public class AnalyzerProcessingLoop extends Thread {
 					frameShotStart = frequency;
 					filePrefix = externalDir + "/" + RECORDING_DIR + "/FS_"
 							+ simpleDateFormat.format(new Date());
+					// Insert into file name with the GPS info
+					if (loc != null) {
+						Location lc = loc.getLastKnownLocation(loc.getBestProvider(crit, false));
+						Log.e(LOGTAG, "LC " + lc);
+						try {
+							filePrefix += "_" + lc.getLatitude() + "_" + lc.getLongitude() + "_"  +  lc.getAltitude();
+						} catch (NullPointerException e) {
+							Log.e(LOGTAG, "FrameShot: Failed to add GPS info, " + e.getMessage());
+						}
+					}
 					frameFile = new File(filePrefix + ".iq");
 					frameFile.getParentFile().mkdir();    // Create directory if it does not yet exist
 					frameOut = new BufferedOutputStream(new FileOutputStream(frameFile));
@@ -258,29 +245,6 @@ public class AnalyzerProcessingLoop extends Thread {
 				// Time to close the file
 				try {
 					frameOut.close();
-					/*
-					// Change file name with the GPS info
-					if (loc != null) {
-						final File fromFile = frameFile;
-						final String filePF = filePrefix;
-						Thread supervisorThread = new Thread() {
-							@Override
-							public void run() {
-								longitude = 0.0;
-								latitude = 0.0;
-								MyLL ll = new MyLL();
-								Looper.prepare();
-								loc.requestSingleUpdate(LocationManager.GPS_PROVIDER, ll, null);
-								Location lc = loc.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-								longitude = lc.getLongitude();
-								latitude = lc.getLatitude();
-								loc.removeUpdates(ll);
-								fromFile.renameTo(new File(filePF + '_' + latitude + '_' + longitude + ".iq"));
-							}
-						};
-						supervisorThread.start();
-					}
-					*/
 					frameFile = null;
 					frameOut = null;
 				} catch (IOException e) {

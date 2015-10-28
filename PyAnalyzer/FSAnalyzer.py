@@ -2,12 +2,14 @@ from __future__ import division
 import os
 import math
 import copy
+import datetime
 from PIL import Image, ImageFont, ImageDraw
 from struct import unpack
 
 inputDir = 'Input'
 midputDir = 'Midput'
 outputDir = 'Output'
+arffDir = 'Arff'
 scaleSize = 500000000
 sScaleSize = 100000000
 markScale = 1000000000
@@ -19,23 +21,35 @@ mixMode = 'average'
 MIX_MODES = ['max', 'average']
 openMidput = True
 openOutput = True
+openArff = True
+openReadFromMid = False
 
 lookupTable = [(i-128)/128 for i in range(128,256)]
 lookupTable.extend([(i-128)/128 for i in range(128)])
 
+freqs = []
+arffAry = []
+fileName = []
+dataCount = 0;
+
+readDir = inputDir
+if openReadFromMid:
+    readDir = midputDir
 print 'Getting the txt files in "' + inputDir +'" for input frame shots...'
-for files in os.listdir(inputDir):
-    path = os.path.join(inputDir, files)
+for files in os.listdir(readDir):
+    path = os.path.join(readDir, files)
     if not os.path.isdir(path):
-        if files[files.rfind('.'):] == '.iq':
-            # Only operate on txt file
-            print 'Operating on ' + path
-            ampQue = []
-            try:
+        try:
+            if not openReadFromMid and files[files.rfind('.'):] == '.iq':
+                # Open target raw data
+                print 'Operating on ' + path
+                ampQue = []
                 inData = open(path, 'r')
                 line = inData.readline().split()
                 startF = int(line[0])
                 endF = int(line[1])
+                startO = startF
+                endO = endF
                 sRate = int(line[2])
                 fSize = int(line[3])
 
@@ -101,143 +115,206 @@ for files in os.listdir(inputDir):
                     startP = 0
                     if frequency - sRate / 2 < startF:
                         startP = int(math.floor(startF - frequency + sRate/2) * n / sRate)
+                        startO = frequency - sRate / 2 + sRate * startP / n
                     if windowType == 1:
                         endP = n // 3
                         if frequency - sRate / 6 > endF:
                             endP = n // 3 - int(math.floor(frequency - sRate/6 - endF) * n / sRate)
+                            endO = frequency - sRate / 2 + sRate * endP / n
                         fsFragment = mag[n*2//3: n]
                         frequency += sRate //3
                     else:
                         endP = n
                         if frequency + sRate / 2 > endF:
                             endP = n - int(math.floor(frequency + sRate/2 - endF) * n / sRate)
+                            endO = frequency - sRate / 2 + sRate * endP / n
                         mag[n*2//3 - n//3: n - n//3] = fsFragment[:]
                         frequency += sRate
                     if startP < endP:
                         ampQue.extend(mag[startP:endP])
                     windowType = 3-windowType
 
-            except IOError as e:
-                print 'Error happen in reading file: {0}. {1}'.format(e.errno, e.strerror)
+            elif openReadFromMid and files[files.rfind('.'):] == '.txt':
+                # Operate on mid txt file
+                print 'Operating on ' + path
+                startF = 0
+                endF = 0
+                startO = 0
+                endO = 0
+                ampQue = []
+                inData = open(path, 'r')
+                for i, line in enumerate(inData):
+                    # Operate on the input file
+                    if i == 0:
+                        # First line includes frequency info
+                        line = line.split()
+                        startF = int(line[0])
+                        endF = int(line[1])
+                        startO = float(line[2])
+                        endO = float(line[3])
+                    else:
+                        # Following lines include amplitude info
+                        line = line.split(',')
+                        if (line[-1] == ''):
+                            line = line[:-1]
+                        ampQue.extend([float(element) for element in line])
+            else:
                 continue
-            except AttributeError as e:
-                print 'File format error: {0}. {1}'.format(e.errno, e.strerror)
-                continue
-            except EOFError:
-                pass
 
-            print 'File reading succeeded',
-            if openMidput:
-                try:
-                    print ', Generating Mid output...'
-                    if not os.path.exists(midputDir):
-                        os.makedirs(midputDir)
-                    midputName = '{0}.txt'.format(files[:files.rfind('.')])
-                    midPath = os.path.join(midputDir, midputName)
-                    midF = open(midPath, 'w')
-                    midF.write('{0} {1}\n'.format(startF, endF))
-                    for ind, i in enumerate(ampQue):
-                        midF.write('{0}'.format(i))
-                        if (ind % 1000 == 0):
-                            midF.write('\n')
-                        else:
-                            midF.write(',')
-                    midF.close()
-                    print 'Generating succeeded',
-                except IOError as e:
-                    print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror),
+        except IOError as e:
+            print 'Error happen in reading file: {0}. {1}'.format(e.errno, e.strerror)
+            continue
+        except AttributeError as e:
+            print 'File format error: {0}. {1}'.format(e.errno, e.strerror)
+            continue
+        except EOFError:
+            pass
 
 
-            if not openOutput:
-                continue
-            print ', Generating image...'
-            height = 600
-            width = int(math.floor((endF - startF) / 1000000 + 0.5)) # Round
-            if heightPreference != 0:
-                height = heightPreference
-            if widthPreference != 0:
-                width = widthPreference
-            wScale = len(ampQue) / width
+        if openArff:
+            if dataCount == 0:
+                queLen = len(ampQue)
+                freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
+            if len(ampQue) != len(freqs):
+                print 'Mismatch in data lenght, target data will not be included in arff output.'
+            else:
+                fileName.append(files[:files.rfind('.')])
+                if (files[:files.find('_')] == 'FS'):
+                    fileName[-1] = fileName[-1][fileName[-1].find('_')+1:]
+                arffAry.append(ampQue)
 
-            sumCol = 0
-            countCol = 0
-            prevCol = 0
-            colQue = []
-            for ind, element in enumerate(ampQue):
-                col = ind // wScale
-                if (col == prevCol): # Still in the same column
-                    countCol += 1
-                    if (mixMode == MIX_MODES[0]): # Max
-                        sumCol = max(element, sumCol)
-                    else: # Average
-                        sumCol += element
-                else: # Column changed, get the value for the previous column
-                    colHeight = 0
-                    if (mixMode == MIX_MODES[0]): #Max
-                        colHeight = sumCol
-                    else: # Average
-                        colHeight = sumCol / countCol
-                    colQue.append(colHeight)
-                    countCol = 1
-                    sumCol = element
-                prevCol = col
 
-            # Generate the image
-            imgOut = Image.new('RGB', (width, height), "white")
-            pixels = imgOut.load()
-            maxA = max(colQue)
-            minA = min(colQue)
-            if maxPreference is not None:
-                maxA = maxPreference
-            if minPreference is not None:
-                minA = minPreference
-            print "Amplitude changes from {0} to {1}".format(minA, maxA)
-            hScale = (maxA - minA) / height
-            if (hScale == 0):
-                print "Error: min amplitude is equal to max amplitude"
-                continue
-            prevFreq = startF - 1
-            scaleArray = []
-            for ind, hgt in enumerate(colQue):
-                hgt = min(int((hgt - minA) // hScale), height)
-                for i in range(hgt):
-                    pixels[ind, i] = (100, 100, 100)
-
-                # Display the scale
-                freq = int(math.floor(ind * (endF - startF) / width + 0.5)) + startF
-                if (freq // scaleSize != prevFreq // scaleSize):
-                    for i in range(int(height // 10)):
-                        if (pixels[ind, i] == (100, 100, 100)):
-                            pixels[ind, i] = (255, 255, 255)
-                        else:
-                            pixels[ind, i] = (0, 0, 0)
-                    scaleArray.append([ind, freq, 0])
-                elif (freq // sScaleSize != prevFreq // sScaleSize):
-                    for i in range(int(height // 25)):
-                        if (pixels[ind, i] == (100, 100, 100)):
-                            pixels[ind, i] = (255, 255, 255)
-                        else:
-                            pixels[ind, i] = (0, 0, 0)
-                    scaleArray.append([ind, freq, 1])
-                prevFreq = freq
-            imgOut = imgOut.transpose(Image.FLIP_TOP_BOTTOM)
-
-            # Add Text
-            d = ImageDraw.Draw(imgOut)
-            fnt = ImageFont.load_default()
-            textPos = [height * 8 // 9, height * 20 // 21]
-            for i in scaleArray:
-                d.text((i[0], textPos[i[2]]), "{0:.1f}".format(i[1]/markScale), font=fnt, fill=(255, 0, 0))
-
+        print 'File reading succeeded',
+        if openMidput and not openReadFromMid:
             try:
-                # Create output dir if not exists
-                if not os.path.exists(outputDir):
-                    os.makedirs(outputDir)
-
-                # Output image
-                outputName = '{0}.png'.format(files[:files.rfind('.')])
-                outPath = os.path.join(outputDir, outputName)
-                imgOut.save(outPath)
-                print 'Operation succeeded! Image output to ' + outPath
+                print ', Generating Mid output...'
+                if not os.path.exists(midputDir):
+                    os.makedirs(midputDir)
+                midputName = '{0}.txt'.format(files[:files.rfind('.')])
+                midPath = os.path.join(midputDir, midputName)
+                midF = open(midPath, 'w')
+                midF.write('{0} {1} {2} {3}\n'.format(startF, endF, startO, endO))
+                for ind, i in enumerate(ampQue):
+                    midF.write('{0}'.format(i))
+                    if (ind % 1000 == 999):
+                        midF.write('\n')
+                    else:
+                        midF.write(',')
+                midF.close()
+                print 'Generating succeeded',
             except IOError as e:
-                print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror)
+                print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror),
+
+
+        if not openOutput:
+            continue
+        print ', Generating image...'
+        height = 600
+        width = int(math.floor((endF - startF) / 1000000 + 0.5)) # Round
+        if heightPreference != 0:
+            height = heightPreference
+        if widthPreference != 0:
+            width = widthPreference
+        wScale = len(ampQue) / width
+
+        sumCol = 0
+        countCol = 0
+        prevCol = 0
+        colQue = []
+        for ind, element in enumerate(ampQue):
+            col = ind // wScale
+            if (col == prevCol): # Still in the same column
+                countCol += 1
+                if (mixMode == MIX_MODES[0]): # Max
+                    sumCol = max(element, sumCol)
+                else: # Average
+                    sumCol += element
+            else: # Column changed, get the value for the previous column
+                colHeight = 0
+                if (mixMode == MIX_MODES[0]): #Max
+                    colHeight = sumCol
+                else: # Average
+                    colHeight = sumCol / countCol
+                colQue.append(colHeight)
+                countCol = 1
+                sumCol = element
+            prevCol = col
+
+        # Generate the image
+        imgOut = Image.new('RGB', (width, height), "white")
+        pixels = imgOut.load()
+        maxA = max(colQue)
+        minA = min(colQue)
+        if maxPreference is not None:
+            maxA = maxPreference
+        if minPreference is not None:
+            minA = minPreference
+        print "Amplitude changes from {0} to {1}".format(minA, maxA)
+        hScale = (maxA - minA) / height
+        if (hScale == 0):
+            print "Error: min amplitude is equal to max amplitude"
+            continue
+        prevFreq = startF - 1
+        scaleArray = []
+        for ind, hgt in enumerate(colQue):
+            hgt = min(int((hgt - minA) // hScale), height)
+            for i in range(hgt):
+                pixels[ind, i] = (100, 100, 100)
+
+            # Display the scale
+            freq = int(math.floor(ind * (endF - startF) / width + 0.5)) + startF
+            if (freq // scaleSize != prevFreq // scaleSize):
+                for i in range(int(height // 10)):
+                    if (pixels[ind, i] == (100, 100, 100)):
+                        pixels[ind, i] = (255, 255, 255)
+                    else:
+                        pixels[ind, i] = (0, 0, 0)
+                scaleArray.append([ind, freq, 0])
+            elif (freq // sScaleSize != prevFreq // sScaleSize):
+                for i in range(int(height // 25)):
+                    if (pixels[ind, i] == (100, 100, 100)):
+                        pixels[ind, i] = (255, 255, 255)
+                    else:
+                        pixels[ind, i] = (0, 0, 0)
+                scaleArray.append([ind, freq, 1])
+            prevFreq = freq
+        imgOut = imgOut.transpose(Image.FLIP_TOP_BOTTOM)
+
+        # Add Text
+        d = ImageDraw.Draw(imgOut)
+        fnt = ImageFont.load_default()
+        textPos = [height * 8 // 9, height * 20 // 21]
+        for i in scaleArray:
+            d.text((i[0], textPos[i[2]]), "{0:.1f}".format(i[1]/markScale), font=fnt, fill=(255, 0, 0))
+
+        try:
+            # Create output dir if not exists
+            if not os.path.exists(outputDir):
+                os.makedirs(outputDir)
+
+            # Output image
+            outputName = '{0}.png'.format(files[:files.rfind('.')])
+            outPath = os.path.join(outputDir, outputName)
+            imgOut.save(outPath)
+            print 'Operation succeeded! Image output to ' + outPath
+        except IOError as e:
+            print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror)
+
+if (openArff and len(fileName)!=0):
+    print 'Outputing Arff file'
+    if not os.path.exists(arffDir):
+        os.makedirs(arffDir)
+    arffName = '{0}.arff'.format(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
+    arffPath = os.path.join(arffDir, arffName)
+    arffF = open(arffPath, 'w')
+    arffF.write('@ATTRIBUTE frequency NUMERIC\n')
+    for i in fileName:
+        arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(i))
+    arffF.write('\n@DATA\n')
+    for ind, i in enumerate(freqs):
+        arffF.write('{0}'.format(i))
+        for j in arffAry:
+            arffF.write(',{0}'.format(j[ind]))
+        arffF.write('\n')
+    arffF.close()
+    print 'Output succeeded'

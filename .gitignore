@@ -15,3 +15,9 @@ build/
 
 # System files
 .DS_Store
+
+# Samples
+FS_*.iq
+*.arff
+FS_*.png
+FS_*.txt

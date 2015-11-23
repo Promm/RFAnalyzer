@@ -19,18 +19,13 @@ maxPreference = -25
 minPreference = -45
 mixMode = 'average'
 MIX_MODES = ['max', 'average']
-openMidput = True
+openMidput = False
 openOutput = True
 openArff = True
 openReadFromMid = False
 
 lookupTable = [(i-128)/128 for i in range(128,256)]
 lookupTable.extend([(i-128)/128 for i in range(128)])
-
-freqs = []
-arffAry = []
-fileName = []
-dataCount = 0;
 
 readDir = inputDir
 if openReadFromMid:
@@ -109,6 +104,9 @@ for files in os.listdir(readDir):
                         realPower *= realPower
                         imagPower = im[i] / n
                         imagPower *= imagPower
+                        if realPower + imagPower == 0:
+                        # Set small default value
+                            realPower = 1e-12
                         mag[targetIndex] = 10*math.log10(math.sqrt(realPower + imagPower))
 
                     # Cut the DC part and use only the valid part
@@ -170,20 +168,6 @@ for files in os.listdir(readDir):
         except EOFError:
             pass
 
-
-        if openArff:
-            if dataCount == 0:
-                queLen = len(ampQue)
-                freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
-            if len(ampQue) != len(freqs):
-                print 'Mismatch in data lenght, target data will not be included in arff output.'
-            else:
-                fileName.append(files[:files.rfind('.')])
-                if (files[:files.find('_')] == 'FS'):
-                    fileName[-1] = fileName[-1][fileName[-1].find('_')+1:]
-                arffAry.append(ampQue)
-
-
         print 'File reading succeeded',
         if openMidput and not openReadFromMid:
             try:
@@ -205,6 +189,24 @@ for files in os.listdir(readDir):
             except IOError as e:
                 print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror),
 
+        if (openArff):
+            print 'Outputing Arff file'
+            queLen = len(ampQue)
+            freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
+            fileName = files[:files.rfind('.')]
+            if not os.path.exists(arffDir):
+                os.makedirs(arffDir)
+            arffName = '{0}.arff'.format(fileName)
+            arffPath = os.path.join(arffDir, arffName)
+            arffF = open(arffPath, 'w')
+            arffF.write('@ATTRIBUTE frequency NUMERIC\n')
+            arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(fileName))
+            arffF.write('\n@DATA\n')
+            for ind, i in enumerate(freqs):
+                arffF.write('{0}, {1}\n'.format(i, ampQue[ind]))
+            arffF.close()
+
+    print 'Output succeeded'
 
         if not openOutput:
             continue
@@ -300,21 +302,3 @@ for files in os.listdir(readDir):
         except IOError as e:
             print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror)
 
-if (openArff and len(fileName)!=0):
-    print 'Outputing Arff file'
-    if not os.path.exists(arffDir):
-        os.makedirs(arffDir)
-    arffName = '{0}.arff'.format(datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    arffPath = os.path.join(arffDir, arffName)
-    arffF = open(arffPath, 'w')
-    arffF.write('@ATTRIBUTE frequency NUMERIC\n')
-    for i in fileName:
-        arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(i))
-    arffF.write('\n@DATA\n')
-    for ind, i in enumerate(freqs):
-        arffF.write('{0}'.format(i))
-        for j in arffAry:
-            arffF.write(',{0}'.format(j[ind]))
-        arffF.write('\n')
-    arffF.close()
-    print 'Output succeeded'

@@ -201,7 +201,9 @@ public class AnalyzerProcessingLoop extends Thread {
 						Location lc = loc.getLastKnownLocation(loc.getBestProvider(crit, false));
 						Log.e(LOGTAG, "LC " + lc);
 						try {
-							filePrefix += "_" + lc.getLatitude() + "_" + lc.getLongitude() + "_"  +  lc.getAltitude();
+							filePrefix += "_" + String.valueOf(lc.getLatitude()) + "_"
+									+ String.valueOf(lc.getLongitude()) + "_"
+									+ String.valueOf(lc.getAltitude());
 						} catch (NullPointerException e) {
 							Log.e(LOGTAG, "FrameShot: Failed to add GPS info, " + e.getMessage());
 						}
@@ -231,7 +233,7 @@ public class AnalyzerProcessingLoop extends Thread {
 						}
 						frameOut.write(samples.getOrigin(), 0, this.fMaxSize);
 						try {
-							sleep(7);
+							sleep(9);
 						} catch (InterruptedException e) {}
 					}
 				}

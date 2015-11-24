@@ -169,8 +169,8 @@ for files in os.listdir(readDir):
             pass
 
         print 'File reading succeeded',
-        if openMidput and not openReadFromMid:
-            try:
+        try:
+            if openMidput and not openReadFromMid:
                 print ', Generating Mid output...'
                 if not os.path.exists(midputDir):
                     os.makedirs(midputDir)
@@ -186,27 +186,27 @@ for files in os.listdir(readDir):
                         midF.write(',')
                 midF.close()
                 print 'Generating succeeded',
-            except IOError as e:
-                print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror),
 
-        if (openArff):
-            print 'Outputing Arff file'
-            queLen = len(ampQue)
-            freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
-            fileName = files[:files.rfind('.')]
-            if not os.path.exists(arffDir):
-                os.makedirs(arffDir)
-            arffName = '{0}.arff'.format(fileName)
-            arffPath = os.path.join(arffDir, arffName)
-            arffF = open(arffPath, 'w')
-            arffF.write('@ATTRIBUTE frequency NUMERIC\n')
-            arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(fileName))
-            arffF.write('\n@DATA\n')
-            for ind, i in enumerate(freqs):
-                arffF.write('{0}, {1}\n'.format(i, ampQue[ind]))
-            arffF.close()
+            if (openArff):
+                print 'Outputing Arff file'
+                queLen = len(ampQue)
+                freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
+                fileName = files[:files.rfind('.')]
+                if not os.path.exists(arffDir):
+                    os.makedirs(arffDir)
+                arffName = '{0}.arff'.format(fileName)
+                arffPath = os.path.join(arffDir, arffName)
+                arffF = open(arffPath, 'w')
+                arffF.write('@ATTRIBUTE frequency NUMERIC\n')
+                arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(fileName))
+                arffF.write('\n@DATA\n')
+                for ind, i in enumerate(freqs):
+                    arffF.write('{0}, {1}\n'.format(i, ampQue[ind]))
+                arffF.close()
+                print 'Output succeeded'
+        except IOError as e:
+            print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror),
 
-    print 'Output succeeded'
 
         if not openOutput:
             continue

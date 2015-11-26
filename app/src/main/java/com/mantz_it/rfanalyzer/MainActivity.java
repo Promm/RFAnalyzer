@@ -1340,6 +1340,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		final EditText et_shotEndOn = (EditText) view.findViewById(R.id.et_recording_shotEndOn);
 		final EditText et_maxShot = (EditText) view.findViewById(R.id.et_recording_maxShots);
 		final EditText et_shotInterval = (EditText) view.findViewById(R.id.et_recording_shotInterval);
+		final EditText et_locName = (EditText) view.findViewById(R.id.et_recording_locName);
 
 		// Setup the sample rate spinner:
 		final ArrayAdapter<Integer> sampleRateAdapter = new ArrayAdapter<Integer>(this, android.R.layout.simple_list_item_1);
@@ -1404,6 +1405,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 				et_shotEndOn.setEnabled(isChecked);
 				et_maxShot.setEnabled(isChecked);
 				et_shotInterval.setEnabled(isChecked);
+				et_locName.setEnabled(isChecked);
 
 			}
 		});
@@ -1430,6 +1432,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		et_shotEndOn.setText("" + preferences.getLong(getString(R.string.pref_recordingShotEnding), 6000000000l));
 		et_maxShot.setText("" + preferences.getInt(getString(R.string.pref_recordingMaxShot), 0));
 		et_shotInterval.setText("" + preferences.getInt(getString(R.string.pref_recordingShotInterval), 0));
+		et_locName.setText("" + preferences.getString(getString(R.string.pref_recordingLocName), "None"));
 
 		// disable sample rate selection if demodulation is running:
 		if(demodulationMode != Demodulator.DEMODULATION_OFF) {
@@ -1485,6 +1488,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 								scheduler.frameShotEndFre((long) freq2);
 								if (analyzerProcessingLoop != null) {
 									analyzerProcessingLoop.setFrameShotEnd((long) freq2);
+									analyzerProcessingLoop.setLocName(et_locName.getText().toString());
 								}
 								// Make sure the buffer is filled with correct signals.
 								Thread.sleep(150);
@@ -1515,6 +1519,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 						edit.putBoolean(getString(R.string.pref_recordingEnableShot), cb_enableShot.isChecked());
 						edit.putInt(getString(R.string.pref_recordingMaxShot), Integer.valueOf(et_maxShot.getText().toString()));
 						edit.putInt(getString(R.string.pref_recordingShotInterval), Integer.valueOf(et_shotInterval.getText().toString()));
+						edit.putString(getString(R.string.pref_recordingLocName), et_locName.getText().toString());
 
 						edit.apply();
 

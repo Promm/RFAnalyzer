@@ -37,6 +37,7 @@
     <string name="recording_frameShotEndOn">Ends on (Hz or MHz):</string>
     <string name="recording_maxFrameShotTaken">Maximum shots taken (0 for infinity):</string>
     <string name="recording_frameShotInterval">Time interval between 2 shots (s):</string>
+    <string name="recording_frameShotLocName">Location Name:</string>
     <string name="save_state_running">save_state_running</string>
     <string name="save_state_demodulatorMode">save_state_demodulatorMode</string>
     <string name="save_state_channelFrequency">save_state_channelFrequency</string>
@@ -59,6 +60,7 @@
     <string name="pref_recordingMaxShot">pref_recordingMaxShot</string>
     <string name="pref_recordingShotInterval">pref_recordingShotInterval</string>
     <string name="pref_recordingShotEnding">pref_recordingShotEnding</string>
+    <string name="pref_recordingLocName">pref_recordingLocName</string>
     <string name="pref_hackrf_vgaRxGain">pref_hackrf_vgaRxGain</string>
     <string name="pref_hackrf_lnaGain">pref_hackrf_lnaGain</string>
     <string name="pref_rtlsdr_manual_gain">pref_rtlsdr_manual_gain</string>

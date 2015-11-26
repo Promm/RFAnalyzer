@@ -147,5 +147,18 @@
                 android:ems="5"
                 android:id="@+id/et_recording_shotInterval"/>
         </LinearLayout>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/recording_frameShotLocName"/>
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/et_recording_locName"/>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

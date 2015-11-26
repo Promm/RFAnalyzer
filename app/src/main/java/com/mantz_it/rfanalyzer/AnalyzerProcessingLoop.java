@@ -71,6 +71,7 @@ public class AnalyzerProcessingLoop extends Thread {
 	private int fMaxSize = 16384;
 	private LocationManager loc = null;
 	private Criteria crit = null;
+	private String locName = "None";
 
 	/**
 	 * Constructor. Will initialize the member attributes.
@@ -149,6 +150,7 @@ public class AnalyzerProcessingLoop extends Thread {
 	public boolean isRunning() {
 		return !stopRequested;
 	}
+	public void setLocName(String iLocName) { locName = iLocName; }
 
 	@Override
 	public void run() {
@@ -196,28 +198,35 @@ public class AnalyzerProcessingLoop extends Thread {
 					frameShotStart = frequency;
 					filePrefix = externalDir + "/" + RECORDING_DIR + "/FS_"
 							+ simpleDateFormat.format(new Date());
-					// Insert into file name with the GPS info
-					if (loc != null) {
-						Location lc = loc.getLastKnownLocation(loc.getBestProvider(crit, false));
-						Log.e(LOGTAG, "LC " + lc);
-						try {
-							filePrefix += "_" + String.valueOf(lc.getLatitude()) + "_"
-									+ String.valueOf(lc.getLongitude()) + "_"
-									+ String.valueOf(lc.getAltitude());
-						} catch (NullPointerException e) {
-							Log.e(LOGTAG, "FrameShot: Failed to add GPS info, " + e.getMessage());
-						}
-					}
 					frameFile = new File(filePrefix + ".iq");
 					frameFile.getParentFile().mkdir();    // Create directory if it does not yet exist
 					frameOut = new BufferedOutputStream(new FileOutputStream(frameFile));
 
+					// Insert into file name with the GPS info
+					double latit = 0.0;
+					double longit = 0.0;
+					double altit = 0.0;
+					if (loc != null) {
+						Location lc = loc.getLastKnownLocation(loc.getBestProvider(crit, false));
+						Log.e(LOGTAG, "LC " + lc);
+						try {
+							latit = lc.getLatitude();
+							longit = lc.getLongitude();
+							altit = lc.getAltitude();
+						} catch (NullPointerException e) {
+							Log.e(LOGTAG, "FrameShot: Failed to add GPS info, " + e.getMessage());
+						}
+					}
 					if (frameOut != null) {
 						// Put the start / end frequency on the first line.
 						String firstLine = Long.toString(frameShotStart) + ' '
 								+ Long.toString(this.frameShotEnd) + ' '
 								+ Integer.toString(sampleRate) + ' '
-								+ Integer.toString(this.fftSize * 2) + '\n';
+								+ Integer.toString(this.fftSize * 2) + ' '
+								+ locName + ' '
+								+ String.valueOf(latit) + ' '
+								+ String.valueOf(longit) + ' '
+								+ String.valueOf(altit) + '\n';
 						frameOut.write(firstLine.getBytes());
 					}
 				}

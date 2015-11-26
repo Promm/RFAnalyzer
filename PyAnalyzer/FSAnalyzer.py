@@ -20,9 +20,19 @@ minPreference = -45
 mixMode = 'average'
 MIX_MODES = ['max', 'average']
 openMidput = False
-openOutput = True
-openArff = True
 openReadFromMid = False
+openOutput = True
+
+openArff = True
+appendArff = True
+arffStep = 20000000
+arffFile = 'ArffOut.arff'
+mapFile = 'ArffMap.arff'
+freqs = []
+attrFreqs = []
+locArray = []
+ampArray = []
+
 
 lookupTable = [(i-128)/128 for i in range(128,256)]
 lookupTable.extend([(i-128)/128 for i in range(128)])
@@ -47,6 +57,10 @@ for files in os.listdir(readDir):
                 endO = endF
                 sRate = int(line[2])
                 fSize = int(line[3])
+                loct = line[4]
+                latit = float(line[5])
+                longit = float(line[6])
+                altit = float(line[7])
 
                 # Preparation for FFT
                 n = fSize // 2
@@ -139,6 +153,10 @@ for files in os.listdir(readDir):
                 endF = 0
                 startO = 0
                 endO = 0
+                loct = 0
+                latit = 0
+                longit = 0
+                altit = 0
                 ampQue = []
                 inData = open(path, 'r')
                 for i, line in enumerate(inData):
@@ -150,6 +168,10 @@ for files in os.listdir(readDir):
                         endF = int(line[1])
                         startO = float(line[2])
                         endO = float(line[3])
+                        loct = line[4]
+                        latit = float(line[5])
+                        longit = float(line[6])
+                        altit = float(line[7])
                     else:
                         # Following lines include amplitude info
                         line = line.split(',')
@@ -158,6 +180,47 @@ for files in os.listdir(readDir):
                         ampQue.extend([float(element) for element in line])
             else:
                 continue
+
+            if (openArff):
+                if (freqs == []):
+                    queLen = len(ampQue)
+                    freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
+                    pFreq = freqs[0]
+                    attrFreqs.append(pFreq)
+                    for i in freqs:
+                        if (i >= pFreq + arffStep):
+                            pFreq = i
+                            attrFreqs.append(pFreq)
+                if (len(ampQue) != len(freqs)):
+                    print 'Data number dismatch, this data will not be output into arff'
+                else:
+                    pAmp = []
+                    ampS = 0
+                    pFreq = freqs[0]
+                    cFreq = 0
+                    for index, i in enumerate(ampQue):
+                        if (freqs[index] >= pFreq + arffStep):
+                            pFreq = freqs[index]
+                            if (cFreq == 0):
+                                pAmp.append(0)
+                            else:
+                                pAmp.append(ampS / cFreq)
+                            ampS = i
+                            cFreq = 1
+                        else:
+                            ampS += i
+                            cFreq += 1
+                    if (cFreq == 0):
+                        pAmp.append(0)
+                    else:
+                        pAmp.append(ampS / cFreq)
+                    ampArray.append(pAmp)
+                    pTime = files[files.find('_')+1 :files.rfind('.')]
+                    if (len(pTime) < 14):
+                        pTime = '00000000000000'
+                    elif (len(pTime) > 14):
+                        pTime = pTime[:15]
+                    locArray.append([pTime, loct, latit, longit, altit])
 
         except IOError as e:
             print 'Error happen in reading file: {0}. {1}'.format(e.errno, e.strerror)
@@ -177,7 +240,8 @@ for files in os.listdir(readDir):
                 midputName = '{0}.txt'.format(files[:files.rfind('.')])
                 midPath = os.path.join(midputDir, midputName)
                 midF = open(midPath, 'w')
-                midF.write('{0} {1} {2} {3}\n'.format(startF, endF, startO, endO))
+                midF.write('{0} {1} {2} {3} {4} {5} {6} {7}\n'.format(startF,
+                        endF, startO, endO, loct, latit, longit, altit))
                 for ind, i in enumerate(ampQue):
                     midF.write('{0}'.format(i))
                     if (ind % 1000 == 999):
@@ -187,23 +251,6 @@ for files in os.listdir(readDir):
                 midF.close()
                 print 'Generating succeeded',
 
-            if (openArff):
-                print 'Outputing Arff file'
-                queLen = len(ampQue)
-                freqs = [(startO + (endO-startO) * i / (queLen-1)) for i in xrange(queLen)]
-                fileName = files[:files.rfind('.')]
-                if not os.path.exists(arffDir):
-                    os.makedirs(arffDir)
-                arffName = '{0}.arff'.format(fileName)
-                arffPath = os.path.join(arffDir, arffName)
-                arffF = open(arffPath, 'w')
-                arffF.write('@ATTRIBUTE frequency NUMERIC\n')
-                arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(fileName))
-                arffF.write('\n@DATA\n')
-                for ind, i in enumerate(freqs):
-                    arffF.write('{0}, {1}\n'.format(i, ampQue[ind]))
-                arffF.close()
-                print 'Output succeeded'
         except IOError as e:
             print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror),
 
@@ -302,3 +349,42 @@ for files in os.listdir(readDir):
         except IOError as e:
             print 'Error in output image: {0}. {1}'.format(e.errno, e.strerror)
 
+
+try:
+    if (openArff and len(ampArray) > 0):
+        print 'Outputing Arff file'
+        if not os.path.exists(arffDir):
+            os.makedirs(arffDir)
+        arffPath = os.path.join(arffDir, arffFile)
+        if (appendArff and os.path.isfile(arffPath)):
+            arffF = open(arffPath, 'a')
+        else:
+            arffF = open(arffPath, 'w')
+            arffF.write('@RELATION FrameshotWirelessWaves')
+            arffF.write('@ATTRIBUTE timestamp DATE "yyyyMMddHHmmss"\n')
+            arffF.write('@ATTRIBUTE location STRING\n')
+            arffF.write('@ATTRIBUTE latitude NUMERIC\n')
+            arffF.write('@ATTRIBUTE longitude NUMERIC\n')
+            arffF.write('@ATTRIBUTE altitude NUMERIC\n')
+
+            arffM = open(os.path.join(arffDir, mapFile), 'w')
+            arffM.write('@RELATION IDvsFREQ')
+            arffM.write('@ATTRIBUTE id NUMERIC\n')
+            arffM.write('@ATTRIBUTE freq NUMERIC\n')
+            arffM.write('\n@DATA\n')
+
+            for ind, i in enumerate(attrFreqs):
+                arffF.write('@ATTRIBUTE {0} NUMERIC\n'.format(ind))
+                arffM.write('{0}, {1}\n'.format(ind, i))
+            arffF.write('\n@DATA\n')
+            arffM.close()
+        for ind, i in enumerate(ampArray):
+            arffF.write('{0}, {1}, {2}, {3}, {4}'.format(locArray[ind][0],
+                    locArray[ind][1], locArray[ind][2], locArray[ind][3], locArray[ind][4]))
+            for j in i:
+                arffF.write(', {0}'.format(abs(j)))
+            arffF.write('\n')
+        arffF.close()
+        print 'Output succeeded'
+except IOError as e:
+    print 'Error in output arff: {0}. {1}'.format(e.errno, e.strerror)

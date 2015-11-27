@@ -21,11 +21,11 @@ mixMode = 'average'
 MIX_MODES = ['max', 'average']
 openMidput = False
 openReadFromMid = False
-openOutput = True
+openOutput = False
 
 openArff = True
 appendArff = True
-arffStep = 20000000
+arffStep = 2000000
 arffFile = 'ArffOut.arff'
 mapFile = 'ArffMap.arff'
 freqs = []
@@ -360,7 +360,7 @@ try:
             arffF = open(arffPath, 'a')
         else:
             arffF = open(arffPath, 'w')
-            arffF.write('@RELATION FrameshotWirelessWaves')
+            arffF.write('@RELATION FrameshotWirelessWaves\n')
             arffF.write('@ATTRIBUTE timestamp DATE "yyyyMMddHHmmss"\n')
             arffF.write('@ATTRIBUTE location STRING\n')
             arffF.write('@ATTRIBUTE latitude NUMERIC\n')
@@ -368,7 +368,7 @@ try:
             arffF.write('@ATTRIBUTE altitude NUMERIC\n')
 
             arffM = open(os.path.join(arffDir, mapFile), 'w')
-            arffM.write('@RELATION IDvsFREQ')
+            arffM.write('@RELATION IDvsFREQ\n')
             arffM.write('@ATTRIBUTE id NUMERIC\n')
             arffM.write('@ATTRIBUTE freq NUMERIC\n')
             arffM.write('\n@DATA\n')
